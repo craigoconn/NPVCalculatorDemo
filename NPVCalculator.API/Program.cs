@@ -20,10 +20,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowClient", policy =>
     {
-        policy.WithOrigins("https://localhost:5002", "http://localhost:5002") // Support both HTTP and HTTPS
+        policy.WithOrigins("https://localhost:5002") 
               .AllowAnyMethod()
               .AllowAnyHeader()
-              .AllowCredentials(); // If you need credentials
+              .AllowCredentials();
     });
 });
 
