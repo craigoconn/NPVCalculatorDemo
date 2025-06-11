@@ -1,0 +1,390 @@
+﻿@using NPVCalculator.Client.Services
+@using NPVCalculator.Shared.Models
+@using System.Text.Json
+@using NpvCalculator.Shared.Services
+@using Microsoft.JSInterop
+@page "/calculate"
+@inject HttpClient Http
+@inject INpvService NpvService
+@inject IJSRuntime JSRuntime
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="mb-0">Net Present Value Calculator</h3>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Cash Flows (comma-separated):</label>
+                        <input class="form-control @(cashFlowsError ? "is-invalid" : "")"
+                               @bind="cashFlowsInput"
+                               placeholder="e.g., -1000,300,400,500" />
+                        @if (cashFlowsError)
+                        {
+                            <div class="invalid-feedback">Please enter valid cash flows separated by commas</div>
+                        }
+                        <div class="form-text">First value is typically the initial investment (negative)</div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Lower Bound Rate (%):</label>
+                            <input type="number" step="0.01" class="form-control" @bind="request.LowerBoundRate" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Upper Bound Rate (%):</label>
+                            <input type="number" step="0.01" class="form-control" @bind="request.UpperBoundRate" />
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Rate Increment (%):</label>
+                        <input type="number" step="0.01" class="form-control" @bind="request.RateIncrement" />
+                    </div>
+
+                    @if (errors.Any())
+                    {
+                        <div class="alert alert-danger">
+                            <ul class="mb-0">
+                                @foreach (var error in errors)
+                                {
+                                    <li>@error</li>
+                                }
+                            </ul>
+                        </div>
+                    }
+
+                    <button class="btn btn-primary" @onclick="CalculateResult" disabled="@isCalculating">
+                        @if (isCalculating)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            <span>Calculating...</span>
+                        }
+                        else
+                        {
+                            <span>Calculate NPV</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            @if (results != null && results.Any())
+            {
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="mb-0">Results</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive" style="max-height: 400px;">
+                            <table class="table table-striped table-sm">
+                                <thead class="table-dark sticky-top">
+                                    <tr>
+                                        <th>Discount Rate</th>
+                                        <th>NPV</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var result in results)
+                                    {
+                                        <tr class="@(result.Value >= 0 ? "table-success" : "table-danger")">
+                                            <td>@result.Rate.ToString("F2")%</td>
+                                            <td>@result.Value.ToString("C2")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        @if (results.Count > 5)
+                        {
+                            <div class="mt-2">
+                                <small class="text-muted">
+                                    Showing @results.Count results.
+                                    Positive NPV (green) indicates profitable investment.
+                                </small>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    @if (results != null && results.Any())
+    {
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="mb-0">NPV Chart</h4>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="npvChart" style="height: 400px; width: 100%;"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private string cashFlowsInput = "-1000,300,400,500";
+    private NpvRequest request = new()
+        {
+            LowerBoundRate = 1.00m,
+            UpperBoundRate = 15.00m,
+            RateIncrement = 0.25m
+        };
+    private List<NpvResult>? results;
+    private List<string> errors = new();
+    private bool isCalculating = false;
+    private bool cashFlowsError = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Check if Chart.js is loaded
+            try
+            {
+                var chartJsLoaded = await JSRuntime.InvokeAsync<bool>("eval", "typeof Chart !== 'undefined'");
+                if (!chartJsLoaded)
+                {
+                    Console.WriteLine("Warning: Chart.js is not loaded. Please include Chart.js in your application.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error checking Chart.js: {ex.Message}");
+            }
+        }
+    }
+
+    private async Task CalculateResult()
+    {
+        errors.Clear();
+        cashFlowsError = false;
+        isCalculating = true;
+
+        try
+        {
+            if (!TryParseCashFlows() || !ValidateInput())
+            {
+                return;
+            }
+
+            var response = await NpvService.CalculateNpvAsync(request);
+
+            if (response.IsSuccess)
+            {
+                results = response.Data;
+                if (results != null && results.Any())
+                {
+                    // Force UI update
+                    StateHasChanged();
+                    await Task.Delay(200); // Give time for DOM to update
+                    await RenderChart();
+                }
+            }
+            else
+            {
+                if (response.Errors?.Any() == true)
+                {
+                    errors.AddRange(response.Errors);
+                }
+                else if (!string.IsNullOrEmpty(response.ErrorMessage))
+                {
+                    errors.Add(response.ErrorMessage);
+                }
+                else
+                {
+                    errors.Add("An unknown error occurred.");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            errors.Add($"Error: {ex.Message}");
+        }
+        finally
+        {
+            isCalculating = false;
+            StateHasChanged();
+        }
+    }
+
+    private bool TryParseCashFlows()
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(cashFlowsInput))
+            {
+                cashFlowsError = true;
+                errors.Add("Cash flows input cannot be empty.");
+                return false;
+            }
+
+            request.CashFlows = cashFlowsInput
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(s => decimal.Parse(s.Trim()))
+                .ToList();
+            return true;
+        }
+        catch
+        {
+            cashFlowsError = true;
+            errors.Add("Invalid cash flows format. Please enter numbers separated by commas.");
+            return false;
+        }
+    }
+
+    private bool ValidateInput()
+    {
+        if (request.CashFlows?.Any() != true)
+        {
+            errors.Add("At least one cash flow is required.");
+            return false;
+        }
+
+        if (request.RateIncrement <= 0)
+        {
+            errors.Add("Rate increment must be greater than 0.");
+            return false;
+        }
+
+        if (request.UpperBoundRate <= request.LowerBoundRate)
+        {
+            errors.Add("Upper bound must be greater than lower bound.");
+            return false;
+        }
+
+        if (request.LowerBoundRate < 0)
+        {
+            errors.Add("Lower bound rate cannot be negative.");
+            return false;
+        }
+
+        return true;
+    }
+
+    private async Task RenderChart()
+    {
+        if (results == null || !results.Any()) return;
+
+        try
+        {
+            var chartData = new
+            {
+                labels = results.Select(r => r.Rate.ToString("F2") + "%").ToArray(),
+                datasets = new[]
+                {
+                    new
+                    {
+                        label = "NPV",
+                        data = results.Select(r => (double)r.Value).ToArray(),
+                        borderColor = "rgb(75, 192, 192)",
+                        backgroundColor = "rgba(75, 192, 192, 0.2)",
+                        tension = 0.1,
+                        fill = false
+                    }
+                }
+            };
+
+            var options = new
+            {
+                responsive = true,
+                maintainAspectRatio = false,
+                plugins = new
+                {
+                    title = new
+                    {
+                        display = true,
+                        text = "NPV vs Discount Rate"
+                    },
+                    legend = new
+                    {
+                        display = false
+                    }
+                },
+                scales = new
+                {
+                    y = new
+                    {
+                        beginAtZero = true,
+                        title = new
+                        {
+                            display = true,
+                            text = "Net Present Value ($)"
+                        }
+                    },
+                    x = new
+                    {
+                        title = new
+                        {
+                            display = true,
+                            text = "Discount Rate (%)"
+                        }
+                    }
+                }
+            };
+
+            // Check if our chart helper is available
+            var helperAvailable = await JSRuntime.InvokeAsync<bool>("eval", "typeof window.chartHelper !== 'undefined'");
+
+            if (helperAvailable)
+            {
+                // Use the chart helper
+                await JSRuntime.InvokeVoidAsync("chartHelper.renderNpvChart", "npvChart", chartData, options);
+            }
+            else
+            {
+                // Fallback to direct Chart.js call
+                var chartJsAvailable = await JSRuntime.InvokeAsync<bool>("eval", "typeof Chart !== 'undefined'");
+                if (!chartJsAvailable)
+                {
+                    errors.Add("Chart.js library is not loaded. Please refresh the page.");
+                    StateHasChanged();
+                    return;
+                }
+
+                await JSRuntime.InvokeVoidAsync("eval", $@"
+                    try {{
+                        const ctx = document.getElementById('npvChart');
+                        if (!ctx) {{
+                            throw new Error('Canvas not found');
+                        }}
+
+                        if (window.npvChart && window.npvChart.destroy) {{
+                            window.npvChart.destroy();
+                        }}
+
+                        window.npvChart = new Chart(ctx, {{
+                            type: 'line',
+                            data: {JsonSerializer.Serialize(chartData)},
+                            options: {JsonSerializer.Serialize(options)}
+                        }});
+                        console.log('Chart created successfully');
+                    }} catch (e) {{
+                        console.error('Chart creation failed:', e);
+                        throw e;
+                    }}
+                ");
+            }
+        }
+        catch (Exception ex)
+        {
+            errors.Add($"Error rendering chart: {ex.Message}");
+            Console.WriteLine($"Chart rendering error: {ex.Message}");
+            StateHasChanged();
+        }
+    }
+
+    public class ErrorResponse
+    {
+        public List<string>? Errors { get; set; }
+    }
+}
