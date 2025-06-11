@@ -11,7 +11,7 @@ builder.Services.AddSwaggerGen(c =>
         Title = "NPV Calculator API",
         Version = "v1",
         Description = "API for calculating Net Present Value across multiple discount rates"
-    });
+    }); 
 });
 
 builder.Services.AddInfrastructure();
