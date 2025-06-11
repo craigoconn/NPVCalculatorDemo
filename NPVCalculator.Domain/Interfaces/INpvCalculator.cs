@@ -20,6 +20,6 @@ namespace NPVCalculator.Domain.Interfaces
         /// <summary>
         /// Calculate NPV for multiple discount rates synchronously (for unit testing)
         /// </summary>
-        IEnumerable<NpvResult> Calculate(NpvRequest request);
+        IEnumerable<NpvResult> Calculate(NpvRequest request); //Is this needed?
     }
 }
