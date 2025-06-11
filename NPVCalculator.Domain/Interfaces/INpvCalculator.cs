@@ -4,7 +4,6 @@ namespace NPVCalculator.Domain.Interfaces
 {
     /// <summary>
     /// Core business interface for NPV calculations
-    /// Follows Interface Segregation Principle
     /// </summary>
     public interface INpvCalculator
     {
