@@ -1,0 +1,66 @@
+﻿@using NPVCalculator.Client.Models
+
+<div class="card">
+    <div class="card-header">
+        <h3 class="mb-0">NPV Calculator</h3>
+    </div>
+    <div class="card-body">
+        <div class="mb-3">
+            <label class="form-label">Cash Flows (comma-separated):</label>
+            <input class="form-control @(Model.HasCashFlowError ? "is-invalid" : "")"
+                   @bind="Model.CashFlowsInput"
+                   placeholder="e.g., -1000,300,400,500" />
+            @if (Model.HasCashFlowError)
+            {
+                <div class="invalid-feedback">Please enter valid cash flows</div>
+            }
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Lower Bound Rate (%):</label>
+                <input type="number" step="0.01" class="form-control" @bind="Model.LowerBoundRate" />
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Upper Bound Rate (%):</label>
+                <input type="number" step="0.01" class="form-control" @bind="Model.UpperBoundRate" />
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Rate Increment (%):</label>
+            <input type="number" step="0.01" class="form-control" @bind="Model.RateIncrement" />
+        </div>
+
+        @if (Errors.Any())
+        {
+            <div class="alert alert-danger">
+                <ul class="mb-0">
+                    @foreach (var error in Errors)
+                    {
+                        <li>@error</li>
+                    }
+                </ul>
+            </div>
+        }
+
+        <button class="btn btn-primary" @onclick="() => OnCalculate.InvokeAsync(Model)" disabled="@IsCalculating">
+            @if (IsCalculating)
+            {
+                <span class="spinner-border spinner-border-sm me-2"></span>
+                <span>Calculating...</span>
+            }
+            else
+            {
+                <span>Calculate NPV</span>
+            }
+        </button>
+    </div>
+</div>
+
+@code {
+    [Parameter] public NpvInputModel Model { get; set; } = new();
+    [Parameter] public EventCallback<NpvInputModel> OnCalculate { get; set; }
+    [Parameter] public bool IsCalculating { get; set; }
+    [Parameter] public List<string> Errors { get; set; } = [];
+}

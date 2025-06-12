@@ -1,0 +1,29 @@
+﻿@using Microsoft.JSInterop
+@using NPVCalculator.Client.Interfaces
+@using NPVCalculator.Client.Services
+@using NPVCalculator.Shared.Models
+@inject IJSRuntime JSRuntime
+@inject IChartService ChartService
+
+<div class="card">
+    <div class="card-header">
+        <h4 class="mb-0">NPV Chart</h4>
+    </div>
+    <div class="card-body">
+        <canvas id="@canvasId" style="height: 400px; width: 100%;"></canvas>
+    </div>
+</div>
+
+@code {
+    [Parameter] public List<NpvResult>? Results { get; set; }
+
+    private string canvasId = $"chart_{Guid.NewGuid():N}";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Results?.Any() == true)
+        {
+            await ChartService.RenderNpvChart(canvasId, Results);
+        }
+    }
+}

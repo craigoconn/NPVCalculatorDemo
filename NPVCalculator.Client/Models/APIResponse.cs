@@ -1,12 +1,5 @@
-﻿using NPVCalculator.Shared.Models;
-
-namespace NpvCalculator.Shared.Services
+﻿namespace NPVCalculator.Client.Models
 {
-    public interface INpvService
-    {
-        Task<ApiResponse<List<NpvResult>>> CalculateNpvAsync(NpvRequest request);
-    }
-
     public class ApiResponse<T>
     {
         public bool IsSuccess { get; set; }

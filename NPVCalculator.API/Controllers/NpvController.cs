@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using NPVCalculator.Domain.Entities;
 using NPVCalculator.Domain.Interfaces;
 using NPVCalculator.Shared.Models;
 
@@ -20,58 +21,46 @@ namespace NPVCalculator.API.Controllers
         }
 
         [HttpPost("calculate")]
-        public async Task<IActionResult> Calculate([FromBody] NpvRequest request)
+        public async Task<IActionResult> Calculate([FromBody] NpvRequest request, CancellationToken cancellationToken = default)
         {
+            if (request == null)
+                return BadRequest(CreateErrorResponse("Request body is required"));
+
             try
             {
-                _logger.LogInformation("Received NPV calculation request with {CashFlowCount} cash flows",
-                    request?.CashFlows?.Count ?? 0);
+                _logger.LogInformation("NPV calculation request with {CashFlowCount} cash flows",
+                    request.CashFlows?.Count ?? 0);
 
                 var validation = _validationService.ValidateNpvRequest(request);
                 if (!validation.IsValid)
-                {
-                    _logger.LogWarning("NPV calculation request validation failed: {Errors}",
-                        string.Join(", ", validation.Errors));
-
-                    return BadRequest(new
-                    {
-                        success = false,
-                        errors = validation.Errors,
-                        warnings = validation.Warnings
-                    });
-                }
+                    return BadRequest(CreateValidationResponse(validation));
 
                 var result = await _calculator.CalculateAsync(request);
 
-                _logger.LogInformation("NPV calculation completed successfully with {ResultCount} results",
-                    result.Count());
+                _logger.LogInformation("NPV calculation completed with {ResultCount} results", result.Count());
 
-                return Ok(new
-                {
-                    success = true,
-                    data = result,
-                    warnings = validation.Warnings
-                });
+                return Ok(CreateSuccessResponse(result, validation.Warnings));
             }
             catch (ArgumentException ex)
             {
-                _logger.LogWarning(ex, "Invalid argument provided for NPV calculation");
-                return BadRequest(new
-                {
-                    success = false,
-                    errors = new[] { ex.Message }
-                });
+                _logger.LogWarning(ex, "Invalid argument in NPV calculation");
+                return BadRequest(CreateErrorResponse(ex.Message));
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unexpected error occurred during NPV calculation");
-                return StatusCode(500, new
-                {
-                    success = false,
-                    errors = new[] { "An error occurred while calculating NPV" }
-                });
+                _logger.LogError(ex, "Unexpected error in NPV calculation");
+                return StatusCode(500, CreateErrorResponse("An error occurred while calculating NPV"));
             }
         }
+
+        private object CreateErrorResponse(string error) =>
+            new { success = false, errors = new[] { error } };
+
+        private object CreateValidationResponse(NpvValidationResult validation) =>
+            new { success = false, errors = validation.Errors.ToArray(), warnings = validation.Warnings.ToArray() };
+
+        private object CreateSuccessResponse(IEnumerable<NpvResult> data, IList<string> warnings) =>
+            new { success = true, data, warnings = warnings.ToArray() };
 
         [HttpGet("health")]
         public IActionResult Health()

@@ -1,24 +1,17 @@
-﻿// Application/Services/ValidationService.cs
-using NPVCalculator.Domain.Entities;
+﻿using NPVCalculator.Domain.Entities;
 using NPVCalculator.Domain.Interfaces;
 using NPVCalculator.Shared.Models;
 using Microsoft.Extensions.Logging;
 
 namespace NPVCalculator.Application.Services
 {
-    /// <summary>
-    /// Enhanced validation service following SOLID principles
-    /// Single Responsibility: Only handles validation logic
-    /// Open/Closed: Can be extended with new validation rules
-    /// </summary>
     public class ValidationService : IValidationService
     {
         private readonly ILogger<ValidationService> _logger;
 
-        // Configuration constants - could be moved to configuration
-        private const decimal MaxUpperBoundRate = 1000m; // 1000%
-        private const decimal MinLowerBoundRate = -100m; // -100%
-        private const decimal MinRateIncrement = 0.01m; // 0.01%
+        private const decimal MaxUpperBoundRate = 1000m;
+        private const decimal MinLowerBoundRate = -100m;
+        private const decimal MinRateIncrement = 0.01m;
         private const int MaxCalculations = 10000;
         private const int MaxCashFlows = 1000;
 
@@ -31,133 +24,89 @@ namespace NPVCalculator.Application.Services
         {
             var result = new NpvValidationResult();
 
-            _logger.LogDebug("Starting validation for NPV request");
-
             if (request == null)
             {
                 result.AddError("Request cannot be null");
-                _logger.LogWarning("NPV request validation failed: null request");
                 return result;
             }
 
-            // Validate cash flows
-            if (!ValidateCashFlows(request.CashFlows))
-            {
-                result.AddError("Invalid cash flows provided");
-            }
-
-            // Validate discount rates
-            if (!ValidateDiscountRates(request.LowerBoundRate, request.UpperBoundRate, request.RateIncrement))
-            {
-                result.AddError("Invalid discount rate parameters");
-            }
-
-            // Additional specific validations
+            ValidateCashFlows(request.CashFlows, result);
+            ValidateDiscountRates(request.LowerBoundRate, request.UpperBoundRate, request.RateIncrement, result);
             ValidateSpecificRules(request, result);
 
             if (!result.IsValid)
             {
-                _logger.LogWarning("NPV request validation failed with {ErrorCount} errors: {Errors}",
-                    result.Errors.Count, string.Join("; ", result.Errors));
-            }
-            else
-            {
-                _logger.LogDebug("NPV request validation passed");
+                _logger.LogWarning("Validation failed with {ErrorCount} errors", result.Errors.Count);
             }
 
             return result;
         }
 
-        public bool ValidateCashFlows(IList<decimal> cashFlows)
+        private static void ValidateCashFlows(IList<decimal> cashFlows, NpvValidationResult result)
         {
             if (cashFlows == null)
             {
-                _logger.LogDebug("Cash flows validation failed: null");
-                return false;
+                result.AddError("Cash flows cannot be null");
+                return;
             }
 
             if (!cashFlows.Any())
             {
-                _logger.LogDebug("Cash flows validation failed: empty collection");
-                return false;
+                result.AddError("At least one cash flow is required");
+                return;
             }
 
             if (cashFlows.Count > MaxCashFlows)
             {
-                _logger.LogDebug("Cash flows validation failed: too many cash flows ({Count} > {Max})",
-                    cashFlows.Count, MaxCashFlows);
-                return false;
+                result.AddError($"Too many cash flows. Maximum allowed: {MaxCashFlows}");
+                return;
             }
 
-            // For decimal, we don't need to check for NaN or Infinity since decimal doesn't support them
-            // Just verify all values are reasonable for financial calculations
-            if (cashFlows.Any(cf => Math.Abs(cf) > 1_000_000_000_000m)) // 1 trillion limit
+            if (cashFlows.Any(cf => Math.Abs(cf) > 1_000_000_000_000m))
             {
-                _logger.LogDebug("Cash flows validation failed: contains extremely large values");
-                return false;
+                result.AddError("Cash flows contain extremely large values");
             }
-
-            return true;
         }
 
-        public bool ValidateDiscountRates(decimal lowerBound, decimal upperBound, decimal increment)
+        private static void ValidateDiscountRates(decimal lowerBound, decimal upperBound, decimal increment, NpvValidationResult result)
         {
-            var isValid = true;
-
             if (lowerBound < MinLowerBoundRate)
-            {
-                _logger.LogDebug("Lower bound rate validation failed: {LowerBound} < {Min}", lowerBound, MinLowerBoundRate);
-                isValid = false;
-            }
+                result.AddError($"Lower bound rate cannot be less than {MinLowerBoundRate}%");
 
             if (upperBound > MaxUpperBoundRate)
-            {
-                _logger.LogDebug("Upper bound rate validation failed: {UpperBound} > {Max}", upperBound, MaxUpperBoundRate);
-                isValid = false;
-            }
+                result.AddError($"Upper bound rate cannot exceed {MaxUpperBoundRate}%");
 
             if (upperBound <= lowerBound)
-            {
-                _logger.LogDebug("Discount rate range validation failed: upper bound ({Upper}) <= lower bound ({Lower})",
-                    upperBound, lowerBound);
-                isValid = false;
-            }
+                result.AddError("Upper bound must be greater than lower bound");
 
             if (increment < MinRateIncrement)
-            {
-                _logger.LogDebug("Rate increment validation failed: {Increment} < {Min}", increment, MinRateIncrement);
-                isValid = false;
-            }
-
-            return isValid;
+                result.AddError($"Rate increment must be at least {MinRateIncrement}%");
         }
 
-        private void ValidateSpecificRules(NpvRequest request, NpvValidationResult result)
+        private static void ValidateSpecificRules(NpvRequest request, NpvValidationResult result)
         {
-            // Check for reasonable number of calculations
             var totalCalculations = (request.UpperBoundRate - request.LowerBoundRate) / request.RateIncrement;
             if (totalCalculations > MaxCalculations)
             {
-                result.AddError($"Too many calculations requested ({totalCalculations:F0}). Maximum allowed: {MaxCalculations}");
+                result.AddError($"Too many calculations ({totalCalculations:F0}). Maximum: {MaxCalculations}");
             }
 
-            // Validate that increment makes sense relative to the range
-            var range = request.UpperBoundRate - request.LowerBoundRate;
-            if (request.RateIncrement > range)
+            if (request.RateIncrement > (request.UpperBoundRate - request.LowerBoundRate))
             {
                 result.AddError("Rate increment cannot be larger than the rate range");
             }
 
-            // Business rule: Warn if all cash flows are positive (unusual for NPV)
-            if (request.CashFlows != null && request.CashFlows.All(cf => cf >= 0))
+            if (request.CashFlows != null)
             {
-                _logger.LogInformation("Warning: All cash flows are non-negative, which is unusual for NPV calculations");
-            }
+                if (request.CashFlows.All(cf => cf >= 0))
+                {
+                    result.AddWarning("All cash flows are positive - unusual for NPV calculations");
+                }
 
-            // Business rule: Warn if first cash flow is positive (usually initial investment is negative)
-            if (request.CashFlows != null && request.CashFlows.Any() && request.CashFlows[0] > 0)
-            {
-                _logger.LogInformation("Warning: First cash flow is positive, typically initial investment is negative");
+                if (request.CashFlows.Any() && request.CashFlows[0] > 0)
+                {
+                    result.AddWarning("First cash flow is positive - typically initial investment is negative");
+                }
             }
         }
     }

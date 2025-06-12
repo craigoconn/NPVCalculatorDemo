@@ -2,6 +2,7 @@ using NPVCalculator.Application;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Services
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -11,27 +12,31 @@ builder.Services.AddSwaggerGen(c =>
         Title = "NPV Calculator API",
         Version = "v1",
         Description = "API for calculating Net Present Value across multiple discount rates"
-    }); 
+    });
 });
 
-builder.Services.AddApplication(builder.Configuration);
+builder.Services.AddApplication();
+
+var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>()
+                     ?? new[] { "https://localhost:5002" };
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowClient", policy =>
     {
-        policy.WithOrigins("https://localhost:5002") 
+        policy.WithOrigins(allowedOrigins)
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials();
     });
 });
 
-// Request/response compression for better performance
 builder.Services.AddResponseCompression();
+builder.Services.AddHealthChecks();
 
 var app = builder.Build();
 
+// Pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -40,22 +45,23 @@ if (app.Environment.IsDevelopment())
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "NPV Calculator API V1");
         c.RoutePrefix = string.Empty;
     });
+
+    app.Use(async (context, next) =>
+    {
+        var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+        logger.LogInformation("{Method} {Path}", context.Request.Method, context.Request.Path);
+        await next();
+    });
+}
+else
+{
+    app.UseExceptionHandler("/error");
 }
 
 app.UseResponseCompression();
 app.UseCors("AllowClient");
 app.UseHttpsRedirection();
-
-if (app.Environment.IsDevelopment())
-{
-    app.Use(async (context, next) =>
-    {
-        var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
-        logger.LogInformation("Request: {Method} {Path}", context.Request.Method, context.Request.Path);
-        await next();
-    });
-}
-
 app.MapControllers();
+app.MapHealthChecks("/health");
 
-app.Run();
+await app.RunAsync();
