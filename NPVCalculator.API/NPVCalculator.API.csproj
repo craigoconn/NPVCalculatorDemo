@@ -11,7 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\NPVCalculator.Infrastructure\NPVCalculator.Infrastructure.csproj" />
+    <ProjectReference Include="..\NPVCalculator.Application\NPVCalculator.Application.csproj" />
   </ItemGroup>
 
 </Project>

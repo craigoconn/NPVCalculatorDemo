@@ -32,7 +32,13 @@ namespace NPVCalculator.API.Controllers
                 {
                     _logger.LogWarning("NPV calculation request validation failed: {Errors}",
                         string.Join(", ", validation.Errors));
-                    return BadRequest(new { errors = validation.Errors });
+
+                    return BadRequest(new
+                    {
+                        success = false,
+                        errors = validation.Errors,
+                        warnings = validation.Warnings
+                    });
                 }
 
                 var result = await _calculator.CalculateAsync(request);
@@ -40,17 +46,30 @@ namespace NPVCalculator.API.Controllers
                 _logger.LogInformation("NPV calculation completed successfully with {ResultCount} results",
                     result.Count());
 
-                return Ok(result);
+                return Ok(new
+                {
+                    success = true,
+                    data = result,
+                    warnings = validation.Warnings
+                });
             }
             catch (ArgumentException ex)
             {
                 _logger.LogWarning(ex, "Invalid argument provided for NPV calculation");
-                return BadRequest(new { message = ex.Message });
+                return BadRequest(new
+                {
+                    success = false,
+                    errors = new[] { ex.Message }
+                });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error occurred during NPV calculation");
-                return StatusCode(500, new { message = "An error occurred while calculating NPV" });
+                return StatusCode(500, new
+                {
+                    success = false,
+                    errors = new[] { "An error occurred while calculating NPV" }
+                });
             }
         }
 

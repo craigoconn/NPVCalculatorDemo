@@ -56,19 +56,20 @@ namespace NPVCalculator.Client.Services
 
                 if (httpResponse.IsSuccessStatusCode)
                 {
-                    var results = await httpResponse.Content.ReadFromJsonAsync<List<NpvResult>>(_jsonOptions);
-
-                    if (results != null)
+                    try
                     {
-                        response.IsSuccess = true;
-                        response.Data = results;
-                        _logger.LogInformation("Successfully calculated NPV for {ResultCount} rates", results.Count);
+                        var apiResponse = await httpResponse.Content.ReadFromJsonAsync<ApiResponseWrapper>(_jsonOptions);
+                        if (apiResponse?.Success == true && apiResponse.Data != null)
+                        {
+                            response.IsSuccess = true;
+                            response.Data = apiResponse.Data;
+                            _logger.LogInformation("Successfully calculated NPV for {ResultCount} rates", apiResponse.Data.Count);
+                            return response;
+                        }
                     }
-                    else
+                    catch (JsonException)
                     {
-                        response.ErrorMessage = "Received empty response from server";
-                        response.Errors.Add("No calculation results returned");
-                        _logger.LogWarning("Received null results from successful API call");
+                        // Fall back to old format
                     }
                 }
                 else
@@ -179,6 +180,13 @@ namespace NPVCalculator.Client.Services
             public string? Title { get; set; }
             public string? Detail { get; set; }
             public Dictionary<string, string[]>? Errors { get; set; }
+        }
+
+        private class ApiResponseWrapper
+        {
+            public bool Success { get; set; }
+            public List<NpvResult>? Data { get; set; }
+            public List<string>? Warnings { get; set; }
         }
 
     }

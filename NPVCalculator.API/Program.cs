@@ -1,4 +1,4 @@
-using NPVCalculator.Infrastructure;
+using NPVCalculator.Application;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,7 +14,7 @@ builder.Services.AddSwaggerGen(c =>
     }); 
 });
 
-builder.Services.AddInfrastructure();
+builder.Services.AddApplication(builder.Configuration);
 
 builder.Services.AddCors(options =>
 {

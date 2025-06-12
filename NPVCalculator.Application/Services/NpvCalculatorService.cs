@@ -49,10 +49,35 @@ namespace NPVCalculator.Application.Services
 
             _logger.LogInformation("Starting async NPV calculation for {TotalCalculations} discount rates", totalCalculations);
 
-            await Task.Run(() =>
+            // True async implementation with periodic yielding
+            await Task.Run(async () =>
             {
-                var calculationResults = Calculate(request);
-                results.AddRange(calculationResults);
+                var iterationCount = 0;
+
+                for (decimal rate = request.LowerBoundRate; rate <= request.UpperBoundRate; rate += request.RateIncrement)
+                {
+                    iterationCount++;
+                    var discountRateDecimal = rate / 100;
+                    var npv = CalculateSingleNpv(request.CashFlows, discountRateDecimal);
+
+                    results.Add(new NpvResult
+                    {
+                        Rate = Math.Round(rate, 2),
+                        Value = npv
+                    });
+
+                    // Yield control every 10 calculations to prevent UI blocking
+                    if (iterationCount % 10 == 0)
+                    {
+                        await Task.Yield();
+                    }
+
+                    if (totalCalculations > 100 && iterationCount % (totalCalculations / 10) == 0)
+                    {
+                        _logger.LogInformation("NPV calculation progress: {Completed}/{Total} ({Percentage:F1}%)",
+                            iterationCount, totalCalculations, (double)iterationCount / totalCalculations * 100);
+                    }
+                }
             });
 
             _logger.LogInformation("Completed async NPV calculation with {ResultCount} results", results.Count);
@@ -65,16 +90,20 @@ namespace NPVCalculator.Application.Services
                 throw new ArgumentNullException(nameof(request));
 
             var results = new List<NpvResult>();
-            var iterationCount = 0;
-            var totalCalculations = CalculateNumberOfIterations(request);
+            var totalIterations = CalculateNumberOfIterations(request);
 
             _logger.LogInformation("Starting NPV calculation for range {LowerBound}% to {UpperBound}% with increment {Increment}%",
                 request.LowerBoundRate, request.UpperBoundRate, request.RateIncrement);
 
-            for (decimal rate = request.LowerBoundRate; rate <= request.UpperBoundRate; rate += request.RateIncrement)
+            // Use integer-based iteration to avoid floating point precision issues
+            for (int i = 0; i < totalIterations; i++)
             {
-                iterationCount++;
-                var discountRateDecimal = rate / 100; 
+                var rate = request.LowerBoundRate + (request.RateIncrement * i);
+
+                // Ensure we don't exceed upper bound due to precision
+                if (rate > request.UpperBoundRate + 0.001m) break;
+
+                var discountRateDecimal = rate / 100;
                 var npv = CalculateSingleNpv(request.CashFlows, discountRateDecimal);
 
                 results.Add(new NpvResult
@@ -83,10 +112,10 @@ namespace NPVCalculator.Application.Services
                     Value = npv
                 });
 
-                if (totalCalculations > 100 && iterationCount % (totalCalculations / 10) == 0)
+                if (totalIterations > 100 && (i + 1) % (totalIterations / 10) == 0)
                 {
                     _logger.LogInformation("NPV calculation progress: {Completed}/{Total} ({Percentage:F1}%)",
-                        iterationCount, totalCalculations, (double)iterationCount / totalCalculations * 100);
+                        i + 1, totalIterations, (double)(i + 1) / totalIterations * 100);
                 }
             }
 
