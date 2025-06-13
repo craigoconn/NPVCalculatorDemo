@@ -1,10 +1,8 @@
-﻿using System.Net.Http.Json;
-using System.Text.Json;
-using Microsoft.Extensions.Logging;
-using NPVCalculator.Client.Services;
+﻿using NPVCalculator.Client.Interfaces;
 using NPVCalculator.Client.Models;
 using NPVCalculator.Shared.Models;
-using NPVCalculator.Client.Interfaces;
+using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace NPVCalculator.Client.Services
 {
