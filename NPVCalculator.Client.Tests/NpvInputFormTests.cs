@@ -20,7 +20,7 @@ namespace NPVCalculator.Client.Tests.Components
                 .Add(p => p.IsCalculating, false)
                 .Add(p => p.Errors, errors));
 
-            // Assert - Use more specific selectors
+            // Assert
             component.Find("h3").TextContent.Should().Be("NPV Calculator");
 
             // Look for input with the actual placeholder text
@@ -115,7 +115,7 @@ namespace NPVCalculator.Client.Tests.Components
                 .Add(p => p.IsCalculating, false)
                 .Add(p => p.Errors, errors));
 
-            // Assert - Check for required input fields
+            // Assert
             var inputs = component.FindAll("input");
             inputs.Should().HaveCountGreaterOrEqualTo(4); // Cash flows + 3 rate inputs
 
@@ -126,48 +126,6 @@ namespace NPVCalculator.Client.Tests.Components
             // Should have button
             var button = component.Find("button");
             button.Should().NotBeNull();
-        }
-    }
-}
-
-// ============================================================================
-// DEBUG TEST - To see what's actually rendered
-// ============================================================================
-namespace NPVCalculator.Client.Tests.Components
-{
-    public class NpvInputFormDebugTests : TestContext
-    {
-        [Fact]
-        public void Debug_NpvInputForm_SeeRenderedMarkup()
-        {
-            // Arrange
-            var model = new NpvInputModel();
-            var errors = new List<string>();
-
-            // Act
-            var component = RenderComponent<NpvInputForm>(parameters => parameters
-                .Add(p => p.Model, model)
-                .Add(p => p.IsCalculating, false)
-                .Add(p => p.Errors, errors));
-
-            // Debug - Print the actual HTML to see what's rendered
-            var markup = component.Markup;
-            Console.WriteLine("=== RENDERED MARKUP ===");
-            Console.WriteLine(markup);
-            Console.WriteLine("=== END MARKUP ===");
-
-            // Find all inputs and print their attributes
-            var inputs = component.FindAll("input");
-            Console.WriteLine($"Found {inputs.Count} input elements:");
-
-            for (int i = 0; i < inputs.Count; i++)
-            {
-                var input = inputs[i];
-                Console.WriteLine($"Input {i}: {input.OuterHtml}");
-            }
-
-            // This test will always pass, it's just for debugging
-            component.Should().NotBeNull();
         }
     }
 }

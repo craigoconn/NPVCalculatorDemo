@@ -5,7 +5,7 @@ using NPVCalculator.Shared.Models;
 
 namespace NPVCalculator.Client.Tests.Components
 {
-    public class NpvResultsTests : TestContext
+    public class NpvResultsFormTests : TestContext
     {
         [Fact]
         public void NpvResults_WithResults_ShouldRenderTable()
@@ -67,7 +67,7 @@ namespace NPVCalculator.Client.Tests.Components
             var component = RenderComponent<NpvResults>(parameters => parameters
                 .Add(p => p.Results, results));
 
-            // Assert - Look for result count in different possible locations
+            // Assert
             try
             {
                 // Try to find 'small' element first
@@ -139,84 +139,6 @@ namespace NPVCalculator.Client.Tests.Components
             }
 
             component.Should().NotBeNull();
-        }
-    }
-}
-
-// ============================================================================
-// SIMPLIFIED LOGIC TESTS (No DOM dependency)
-// ============================================================================
-namespace NPVCalculator.Client.Tests.Components
-{
-    public class NpvResultsLogicTests
-    {
-        [Fact]
-        public void GetRowClass_WithPositiveNpv_ShouldReturnSuccessClass()
-        {
-            // Test the CSS class logic that your component uses
-            var result = GetRowClass(100m);
-            result.Should().Be("table-success");
-        }
-
-        [Fact]
-        public void GetRowClass_WithNegativeNpv_ShouldReturnDangerClass()
-        {
-            var result = GetRowClass(-50m);
-            result.Should().Be("table-danger");
-        }
-
-        [Fact]
-        public void GetRowClass_WithZeroNpv_ShouldReturnSuccessClass()
-        {
-            var result = GetRowClass(0m);
-            result.Should().Be("table-success");
-        }
-
-        [Fact]
-        public void FormatRate_ShouldDisplayCorrectly()
-        {
-            var rate = 1.25m;
-            var formatted = rate.ToString("F2") + "%";
-            formatted.Should().Be("1.25%");
-        }
-
-        [Fact]
-        public void FormatCurrency_ShouldDisplayCorrectly()
-        {
-            var value = 1234.56m;
-            var formatted = value.ToString("C2");
-
-            // Currency formatting includes thousands separators and currency symbols
-            formatted.Should().Match("*1,234.56*"); // Should contain the number with comma
-            // Alternative: Just check it contains the core number parts
-            formatted.Should().Contain("1,234");
-            formatted.Should().Contain("56");
-        }
-
-        [Fact]
-        public void FormatCurrency_WithNegativeValue_ShouldDisplayCorrectly()
-        {
-            var value = -1234.56m;
-            var formatted = value.ToString("C2");
-
-            formatted.Should().Contain("1,234.56");
-            formatted.Should().Match("*-*"); // Should indicate negative somehow
-        }
-
-        [Fact]
-        public void FormatCurrency_WithSmallValue_ShouldDisplayCorrectly()
-        {
-            var value = 123.45m;
-            var formatted = value.ToString("C2");
-
-            // Small values won't have commas
-            formatted.Should().Contain("123.45");
-        }
-
-        // Helper method that mimics your component logic
-        private string GetRowClass(decimal npvValue)
-        {
-            return npvValue >= 0 ? "table-success" : "table-danger";
         }
     }
 }

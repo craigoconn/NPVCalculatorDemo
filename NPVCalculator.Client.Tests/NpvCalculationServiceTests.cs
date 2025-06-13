@@ -49,7 +49,7 @@ namespace NPVCalculator.Client.Tests.Services
         {
             // Arrange
             var inputModel = CreateValidInputModel();
-            var validationResult = new InputValidationResult(); // Empty errors = IsValid = true
+            var validationResult = new InputValidationResult();
             var expectedResults = CreateSampleNpvResults();
             var apiResponse = new ApiResponse<List<NpvResult>>
             {
@@ -77,7 +77,7 @@ namespace NPVCalculator.Client.Tests.Services
         {
             // Arrange
             var inputModel = CreateValidInputModel();
-            var validationResult = new InputValidationResult(); // Empty errors = IsValid = true
+            var validationResult = new InputValidationResult();
             var apiResponse = new ApiResponse<List<NpvResult>>
             {
                 IsSuccess = true,
@@ -111,7 +111,7 @@ namespace NPVCalculator.Client.Tests.Services
             var validationErrors = new List<string> { "Cash flows are required", "Invalid rate range" };
             var validationResult = new InputValidationResult
             {
-                Errors = validationErrors // This makes IsValid = false automatically
+                Errors = validationErrors 
             };
 
             _mockInputValidator.Setup(x => x.ValidateInput(inputModel))
@@ -126,7 +126,6 @@ namespace NPVCalculator.Client.Tests.Services
             result.Errors.Should().BeEquivalentTo(validationErrors);
             result.ResultType.Should().Be(NpvCalculationResultType.ValidationFailure);
 
-            // Verify service was not called
             _mockNpvService.Verify(x => x.CalculateNpvAsync(It.IsAny<NpvRequest>()), Times.Never);
         }
 
@@ -263,12 +262,12 @@ namespace NPVCalculator.Client.Tests.Services
             // Arrange
             var inputModel = new NpvInputModel
             {
-                CashFlowsInput = "invalid,not-a-number,abc", // Invalid format
+                CashFlowsInput = "invalid,not-a-number,abc",
                 LowerBoundRate = 1m,
                 UpperBoundRate = 5m,
                 RateIncrement = 1m
             };
-            var validationResult = new InputValidationResult(); // Valid from validation service perspective
+            var validationResult = new InputValidationResult();
 
             _mockInputValidator.Setup(x => x.ValidateInput(inputModel))
                               .Returns(validationResult);
@@ -289,7 +288,7 @@ namespace NPVCalculator.Client.Tests.Services
             // Arrange
             var inputModel = new NpvInputModel
             {
-                CashFlowsInput = " -1000 , 300 , 400 , 500 ", // Whitespace should be handled
+                CashFlowsInput = " -1000 , 300 , 400 , 500 ",
                 LowerBoundRate = 1m,
                 UpperBoundRate = 5m,
                 RateIncrement = 1m
@@ -321,7 +320,7 @@ namespace NPVCalculator.Client.Tests.Services
             // Arrange
             var inputModel = new NpvInputModel
             {
-                CashFlowsInput = "", // Empty string
+                CashFlowsInput = "", 
                 LowerBoundRate = 1m,
                 UpperBoundRate = 5m,
                 RateIncrement = 1m
@@ -394,7 +393,6 @@ namespace NPVCalculator.Client.Tests.Services
             // Assert
             result.IsSuccess.Should().BeTrue();
 
-            // Verify the NpvRequest was created correctly
             _mockNpvService.Verify(x => x.CalculateNpvAsync(It.Is<NpvRequest>(req =>
                 req.CashFlows.SequenceEqual(new List<decimal> { -2000, 500, 600, 700 }) &&
                 req.LowerBoundRate == 2m &&
@@ -490,7 +488,7 @@ namespace NPVCalculator.Client.Tests.Services
         {
             return new NpvInputModel
             {
-                CashFlowsInput = "-1000,300,400,500", // Using string input format
+                CashFlowsInput = "-1000,300,400,500", 
                 LowerBoundRate = 1m,
                 UpperBoundRate = 5m,
                 RateIncrement = 1m

@@ -76,7 +76,7 @@ namespace NPVCalculator.Application.Tests
             var request = new NpvRequest
             {
                 CashFlows = new List<decimal> { -1000, 300 },
-                LowerBoundRate = 15m,  // Higher than upper bound
+                LowerBoundRate = 15m, 
                 UpperBoundRate = 1m,
                 RateIncrement = 0.25m
             };
@@ -95,7 +95,7 @@ namespace NPVCalculator.Application.Tests
             // Arrange
             var request = new NpvRequest
             {
-                CashFlows = new List<decimal> { 1000, 300, 400, 500 }, // All positive
+                CashFlows = new List<decimal> { 1000, 300, 400, 500 },
                 LowerBoundRate = 1m,
                 UpperBoundRate = 15m,
                 RateIncrement = 0.25m

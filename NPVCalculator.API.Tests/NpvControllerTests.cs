@@ -85,7 +85,6 @@ namespace NPVCalculator.API.Tests
             var badRequestResult = result as BadRequestObjectResult;
             badRequestResult.Value.Should().NotBeNull();
 
-            // Verify the error response structure
             var response = badRequestResult.Value;
             response.Should().BeEquivalentTo(new { success = false, errors = new[] { "Request body is required" } });
         }
@@ -99,8 +98,6 @@ namespace NPVCalculator.API.Tests
             // Assert
             result.Should().BeOfType<OkObjectResult>();
         }
-
-        // NEW EXCEPTION TESTS
 
         [Fact]
         public async Task Calculate_WhenArgumentExceptionThrown_ShouldReturnBadRequest()
@@ -216,7 +213,6 @@ namespace NPVCalculator.API.Tests
                 errors = new[] { "An error occurred while calculating NPV" }
             });
 
-            // Verify logging
             _mockLogger.Verify(
                 x => x.Log(
                     LogLevel.Error,
@@ -260,7 +256,6 @@ namespace NPVCalculator.API.Tests
             result.Should().BeOfType<OkObjectResult>();
             var okResult = result as OkObjectResult;
 
-            // Verify the response structure includes warnings
             var expectedResponse = new
             {
                 success = true,

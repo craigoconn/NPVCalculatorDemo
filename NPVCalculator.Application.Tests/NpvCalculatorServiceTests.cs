@@ -31,7 +31,7 @@ namespace NPVCalculator.Application.Tests
             var result = _service.CalculateSingleNpv(cashFlows, discountRate);
 
             // Assert
-            result.Should().BeApproximately(-21.04m, 0.01m); // Expected NPV for this scenario
+            result.Should().BeApproximately(-21.04m, 0.01m);
         }
 
         [Fact]
@@ -45,7 +45,7 @@ namespace NPVCalculator.Application.Tests
             var result = _service.CalculateSingleNpv(cashFlows, discountRate);
 
             // Assert
-            result.Should().Be(200m); // -1000 + 300 + 400 + 500
+            result.Should().Be(200m); 
         }
 
         [Fact]
@@ -87,7 +87,7 @@ namespace NPVCalculator.Application.Tests
             var result = _service.CalculateSingleNpv(cashFlows, discountRate);
 
             // Assert
-            result.Should().Be(-1000m); // Period 0, so discount factor is 1
+            result.Should().Be(-1000m);
         }
 
         [Fact]
@@ -101,7 +101,7 @@ namespace NPVCalculator.Application.Tests
             var result = _service.CalculateSingleNpv(cashFlows, discountRate);
 
             // Assert
-            result.Should().BeApproximately(-266.67m, 0.01m); // -1000 + 1100/1.5
+            result.Should().BeApproximately(-266.67m, 0.01m);
         }
 
         [Fact]
@@ -109,13 +109,13 @@ namespace NPVCalculator.Application.Tests
         {
             // Arrange
             var cashFlows = new List<decimal> { -1000, 500 };
-            var discountRate = -0.1m; // -10%
+            var discountRate = -0.1m; 
 
             // Act
             var result = _service.CalculateSingleNpv(cashFlows, discountRate);
 
             // Assert
-            result.Should().BeApproximately(-444.44m, 0.01m); // -1000 + 500/0.9
+            result.Should().BeApproximately(-444.44m, 0.01m); 
         }
 
         #endregion
@@ -138,7 +138,7 @@ namespace NPVCalculator.Application.Tests
             var results = await _service.CalculateAsync(request);
 
             // Assert
-            results.Should().HaveCount(5); // 1%, 2%, 3%, 4%, 5%
+            results.Should().HaveCount(5);
             results.Select(r => r.Rate).Should().BeEquivalentTo(new[] { 1m, 2m, 3m, 4m, 5m });
         }
 
@@ -187,7 +187,7 @@ namespace NPVCalculator.Application.Tests
             var results = await _service.CalculateAsync(request);
 
             // Assert
-            results.Should().HaveCount(3); // 1%, 1.5%, 2%
+            results.Should().HaveCount(3);
             results.Select(r => r.Rate).Should().BeEquivalentTo(new[] { 1m, 1.5m, 2m });
         }
 
@@ -207,7 +207,7 @@ namespace NPVCalculator.Application.Tests
             var results = await _service.CalculateAsync(request);
 
             // Assert
-            results.Should().HaveCount(25); // 1% to 25%
+            results.Should().HaveCount(25);
             results.All(r => r.Value != 0).Should().BeTrue();
         }
 
@@ -269,7 +269,7 @@ namespace NPVCalculator.Application.Tests
             var results = _service.Calculate(request);
 
             // Assert
-            results.Should().HaveCount(5); // 1%, 2%, 3%, 4%, 5%
+            results.Should().HaveCount(5);
             results.Select(r => r.Rate).Should().BeEquivalentTo(new[] { 1m, 2m, 3m, 4m, 5m });
         }
 
@@ -318,7 +318,7 @@ namespace NPVCalculator.Application.Tests
             var results = _service.Calculate(request);
 
             // Assert
-            results.Should().HaveCount(5); // 0.5%, 0.75%, 1%, 1.25%, 1.5%
+            results.Should().HaveCount(5); 
             results.Select(r => r.Rate).Should().BeEquivalentTo(new[] { 0.5m, 0.75m, 1m, 1.25m, 1.5m });
         }
 
@@ -338,7 +338,7 @@ namespace NPVCalculator.Application.Tests
             var results = _service.Calculate(request);
 
             // Assert
-            results.Should().HaveCount(2); // 1%, 4% (next would be 7%, which exceeds 5%)
+            results.Should().HaveCount(2);
             results.Select(r => r.Rate).Should().BeEquivalentTo(new[] { 1m, 4m });
         }
 
@@ -403,7 +403,7 @@ namespace NPVCalculator.Application.Tests
             var results = await _service.CalculateAsync(request);
 
             // Assert
-            results.Should().HaveCount(3); // 1%, 1.01%, 1.02%
+            results.Should().HaveCount(3);
             results.Select(r => r.Rate).Should().BeEquivalentTo(new[] { 1m, 1.01m, 1.02m });
         }
 
@@ -423,7 +423,7 @@ namespace NPVCalculator.Application.Tests
             var results = _service.Calculate(request);
 
             // Assert
-            results.Should().HaveCount(3); // 0.1%, 0.2%, 0.3%
+            results.Should().HaveCount(3); 
             results.All(r => r.Rate >= 0.1m && r.Rate <= 0.3m).Should().BeTrue();
         }
 
@@ -438,7 +438,6 @@ namespace NPVCalculator.Application.Tests
             var result = _service.CalculateSingleNpv(cashFlows, discountRate);
 
             // Assert
-            // Should be rounded to 2 decimal places
             result.Should().Be(Math.Round(result, 2));
             result.ToString().Split('.').LastOrDefault()?.Length.Should().BeLessThanOrEqualTo(2);
         }
@@ -459,7 +458,7 @@ namespace NPVCalculator.Application.Tests
             var results = await _service.CalculateAsync(request);
 
             // Assert
-            results.Should().HaveCount(3); // 1%, 2%, 3%
+            results.Should().HaveCount(3);
             results.Last().Rate.Should().Be(3m);
         }
 
