@@ -15,5 +15,6 @@ builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(apiBaseA
 builder.Services.AddScoped<INpvService, NpvService>();
 builder.Services.AddScoped<IInputValidationService, InputValidationService>();
 builder.Services.AddScoped<IChartService, ChartService>();
+builder.Services.AddScoped<INpvCalculationService, NpvCalculationService>();
 
 await builder.Build().RunAsync();

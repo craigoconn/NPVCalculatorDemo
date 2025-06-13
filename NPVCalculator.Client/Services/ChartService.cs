@@ -11,11 +11,17 @@ namespace NPVCalculator.Client.Services
 
         public ChartService(IJSRuntime jsRuntime)
         {
-            _jsRuntime = jsRuntime;
+            _jsRuntime = jsRuntime ?? throw new ArgumentNullException(nameof(jsRuntime));
         }
 
         public async Task RenderNpvChart(string canvasId, List<NpvResult> results)
         {
+            // Don't render chart if results are null or empty
+            if (results == null || !results.Any())
+            {
+                return;
+            }
+
             try
             {
                 var chartData = new
@@ -58,7 +64,6 @@ namespace NPVCalculator.Client.Services
                     }
                 };
 
-                // Use Chart.js directly without any helper file
                 var script = $@"
                 (function() {{
                     try {{
@@ -98,7 +103,6 @@ namespace NPVCalculator.Client.Services
             {
                 Console.WriteLine($"Chart rendering error: {ex.Message}");
             }
-
         }
     }
 }

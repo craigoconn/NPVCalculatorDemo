@@ -2,26 +2,26 @@
 @using NPVCalculator.Shared.Models
 @using NPVCalculator.Client.Services
 @using NPVCalculator.Client.Models
+@using NPVCalculator.Client.Components
 @page "/"
 @page "/calculate"
-@inject INpvService NpvService
-@inject IInputValidationService InputValidator
+@inject INpvCalculationService CalculationService
 @inject IChartService ChartService
 
 <div class="container mt-4">
     <div class="row">
         <div class="col-md-6">
-            <NpvInputForm Model="@model" 
-                         OnCalculate="@HandleCalculate" 
-                         IsCalculating="@isCalculating" 
-                         Errors="@errors" />
+            <NpvInputForm Model="@model"
+                          OnCalculate="@HandleCalculate"
+                          IsCalculating="@isCalculating"
+                          Errors="@errors" />
         </div>
         <div class="col-md-6">
             <NpvResults Results="@results" />
         </div>
     </div>
-    
-    @if (results?.Any() == true)
+
+    @if (HasResults())
     {
         <div class="row mt-4">
             <div class="col-12">
@@ -37,40 +37,39 @@
     private List<string> errors = [];
     private bool isCalculating = false;
 
+    private bool HasResults() => results?.Any() == true;
+
     private async Task HandleCalculate(NpvInputModel inputModel)
     {
+        SetCalculatingState(true);
+        ClearErrors();
+
+        var result = await CalculationService.ProcessCalculationAsync(inputModel);
+
+        ProcessCalculationResult(result);
+        SetCalculatingState(false);
+    }
+
+    private void SetCalculatingState(bool calculating)
+    {
+        isCalculating = calculating;
+        StateHasChanged();
+    }
+
+    private void ClearErrors()
+    {
         errors.Clear();
-        isCalculating = true;
+    }
 
-        try
+    private void ProcessCalculationResult(NpvCalculationResult result)
+    {
+        if (result.IsSuccess)
         {
-            var validationResult = InputValidator.ValidateInput(inputModel);
-            if (!validationResult.IsValid)
-            {
-                errors.AddRange(validationResult.Errors);
-                return;
-            }
-
-            var request = inputModel.ToNpvRequest();
-            var response = await NpvService.CalculateNpvAsync(request);
-
-            if (response.IsSuccess)
-            {
-                results = response.Data;
-            }
-            else
-            {
-                errors.AddRange(response.Errors ?? []);
-            }
+            results = result.Results;
         }
-        catch (Exception ex)
+        else
         {
-            errors.Add($"Error: {ex.Message}");
-        }
-        finally
-        {
-            isCalculating = false;
-            StateHasChanged();
+            errors.AddRange(result.Errors);
         }
     }
 }
