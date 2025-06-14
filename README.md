@@ -33,8 +33,8 @@ This application calculates Net Present Value for a series of cash flows across 
 
 ### **Project Structure**
 - **NPVCalculator.API** - RESTful Web API controllers and configuration
-- **NPVCalculator.Application** - Business logic services and dependency injection
-- **NPVCalculator.Domain** - Core business entities and interfaces
+- **NPVCalculator.Application** - Business logic orchestration and workflow services
+- **NPVCalculator.Domain** - Core business entities, interfaces, and calculation logic
 - **NPVCalculator.Shared** - Data transfer objects and shared models
 - **NPVCalculator.Client** - Blazor WebAssembly frontend application
 
@@ -171,10 +171,8 @@ dotnet test
 ## **Performance Considerations**
 
 - **Asynchronous Processing**: CPU-intensive calculations use `Task.Run()` with periodic yielding
-- **Progress Logging**: Large calculations show progress updates
 - **Input Validation**: Prevents excessive computation requests
 - **Response Compression**: Optimized data transfer
-- **Efficient Algorithms**: Optimized NPV calculation implementation
 
 ## **Input Validation**
 
@@ -246,9 +244,10 @@ NPV = -21.03
 ## **Project Components**
 
 ### **Backend Services**
-- **NpvCalculatorService**: Core NPV calculation logic
-- **ValidationService**: Input validation and business rules
-- **NpvController**: HTTP request handling and response formatting
+- **NpvDomainService**: Pure mathematical NPV calculation logic (Domain layer)
+- **NpvCalculatorService**: Workflow orchestration and batch processing (Application layer)
+- **ValidationService**: Input validation and business rules (Application layer)
+- **NpvController**: HTTP request handling and response formatting (API layer)
 
 ### **Frontend Components**
 - **NpvInputForm**: User input form with validation
