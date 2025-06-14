@@ -5,6 +5,6 @@ namespace NPVCalculator.Domain.Interfaces
     public interface INpvCalculator
     {
         decimal CalculateSingleNpv(IList<decimal> cashFlows, decimal discountRate);
-        Task<IEnumerable<NpvResult>> CalculateAsync(NpvRequest request);
+        Task<IEnumerable<NpvResult>> CalculateAsync(NpvRequest request, CancellationToken cancellationToken = default);
     }
 }

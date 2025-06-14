@@ -36,18 +36,65 @@
     private List<NpvResult>? results;
     private List<string> errors = [];
     private bool isCalculating = false;
+    private CancellationTokenSource? _cancellationTokenSource;
 
     private bool HasResults() => results?.Any() == true;
 
     private async Task HandleCalculate(NpvInputModel inputModel)
     {
+        _cancellationTokenSource?.Cancel();
+        _cancellationTokenSource = new CancellationTokenSource();
+
         SetCalculatingState(true);
         ClearErrors();
+        results = new List<NpvResult>();
 
-        var result = await CalculationService.ProcessCalculationAsync(inputModel);
+        try
+        {
+            var result = await CalculationService.ProcessCalculationAsync(inputModel);
 
-        ProcessCalculationResult(result);
-        SetCalculatingState(false);
+            if (result.IsSuccess && result.Results != null)
+            {
+                // Progressive display simulation
+                await DisplayResultsProgressively(result.Results, _cancellationTokenSource.Token);
+            }
+            else
+            {
+                errors.AddRange(result.Errors);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            errors.Add("Calculation was cancelled");
+        }
+        finally
+        {
+            SetCalculatingState(false);
+        }
+    }
+
+    private async Task DisplayResultsProgressively(List<NpvResult> calculatedResults, CancellationToken cancellationToken)
+    {
+        const int batchSize = 5; // Display 5 results at a time
+
+        for (int i = 0; i < calculatedResults.Count; i += batchSize)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var batch = calculatedResults.Skip(i).Take(batchSize);
+            results!.AddRange(batch);
+
+            StateHasChanged(); // Update UI
+            await InvokeAsync(StateHasChanged); // Ensure UI updates
+
+            // Small delay for visual effect
+            await Task.Delay(100, cancellationToken);
+        }
+    }
+
+    private void CancelCalculation()
+    {
+        _cancellationTokenSource?.Cancel();
     }
 
     private void SetCalculatingState(bool calculating)
@@ -61,15 +108,12 @@
         errors.Clear();
     }
 
-    private void ProcessCalculationResult(NpvCalculationResult result)
-    {
-        if (result.IsSuccess)
-        {
-            results = result.Results;
-        }
-        else
-        {
-            errors.AddRange(result.Errors);
-        }
-    }
+}
+
+@code {
+    [Parameter] public NpvInputModel Model { get; set; } = new();
+    [Parameter] public EventCallback<NpvInputModel> OnCalculate { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public bool IsCalculating { get; set; }
+    [Parameter] public List<string> Errors { get; set; } = [];
 }

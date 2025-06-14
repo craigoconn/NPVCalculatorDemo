@@ -1,6 +1,4 @@
-﻿using Microsoft.JSInterop;
-using NPVCalculator.Shared.Models;
-using System.Text.Json;
+﻿using NPVCalculator.Shared.Models;
 
 namespace NPVCalculator.Client.Interfaces
 {

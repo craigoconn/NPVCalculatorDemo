@@ -35,11 +35,15 @@ namespace NPVCalculator.API.Controllers
                 if (!validation.IsValid)
                     return BadRequest(CreateValidationResponse(validation));
 
-                var result = await _calculator.CalculateAsync(request);
+                var result = await _calculator.CalculateAsync(request, cancellationToken); 
 
                 _logger.LogInformation("NPV calculation completed with {ResultCount} results", result.Count());
-
                 return Ok(CreateSuccessResponse(result, validation.Warnings));
+            }
+            catch (OperationCanceledException ex)
+            {
+                _logger.LogInformation(ex,"NPV calculation was cancelled");
+                return StatusCode(409, CreateErrorResponse("Operation was cancelled"));
             }
             catch (ArgumentException ex)
             {
@@ -52,7 +56,6 @@ namespace NPVCalculator.API.Controllers
                 return StatusCode(500, CreateErrorResponse("An error occurred while calculating NPV"));
             }
         }
-
         private object CreateErrorResponse(string error) =>
             new { success = false, errors = new[] { error } };
 
