@@ -6,26 +6,19 @@ namespace NPVCalculator.Application.Services
 {
     public class NpvCalculatorService : INpvCalculator
     {
+        private readonly INpvDomainService _npvDomainService;
         private readonly ILogger<NpvCalculatorService> _logger;
 
-        public NpvCalculatorService(ILogger<NpvCalculatorService> logger)
+        public NpvCalculatorService(INpvDomainService npvDomainService, ILogger<NpvCalculatorService> logger)
         {
+            _npvDomainService = npvDomainService ?? throw new ArgumentNullException(nameof(npvDomainService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         public decimal CalculateSingleNpv(IList<decimal> cashFlows, decimal discountRate)
         {
-            if (cashFlows == null || !cashFlows.Any())
-                throw new ArgumentException("Cash flows cannot be null or empty", nameof(cashFlows));
-
-            decimal npv = 0;
-            for (int t = 0; t < cashFlows.Count; t++)
-            {
-                var discountFactor = CalculateDiscountFactor(discountRate, t);
-                npv += cashFlows[t] * discountFactor;
-            }
-
-            return Math.Round(npv, 2);
+            // Delegate to domain service
+            return _npvDomainService.CalculateNpv(cashFlows, discountRate);
         }
 
         public async Task<IEnumerable<NpvResult>> CalculateAsync(NpvRequest request)
@@ -43,7 +36,9 @@ namespace NPVCalculator.Application.Services
                 for (int i = 0; i < rates.Count; i++)
                 {
                     var rate = rates[i];
-                    var npv = CalculateSingleNpv(request.CashFlows, rate / 100);
+
+                    // Use domain service for calculation
+                    var npv = _npvDomainService.CalculateNpv(request.CashFlows, rate / 100);
 
                     results.Add(new NpvResult
                     {
@@ -70,7 +65,9 @@ namespace NPVCalculator.Application.Services
 
             foreach (var rate in rates)
             {
-                var npv = CalculateSingleNpv(request.CashFlows, rate / 100);
+                // Use domain service for calculation
+                var npv = _npvDomainService.CalculateNpv(request.CashFlows, rate / 100);
+
                 results.Add(new NpvResult
                 {
                     Rate = Math.Round(rate, 2),
@@ -81,27 +78,16 @@ namespace NPVCalculator.Application.Services
             return results;
         }
 
-        private IEnumerable<decimal> GenerateDiscountRates(NpvRequest request)
+        private static IEnumerable<decimal> GenerateDiscountRates(NpvRequest request)
         {
             var totalIterations = CalculateNumberOfIterations(request);
-
             for (int i = 0; i < totalIterations; i++)
             {
                 var rate = request.LowerBoundRate + (request.RateIncrement * i);
                 if (rate > request.UpperBoundRate + 0.001m)
                     yield break;
-
                 yield return rate;
             }
-        }
-
-        private static decimal CalculateDiscountFactor(decimal discountRate, int period)
-        {
-            if (period == 0)
-                return 1m;
-
-            var factor = 1.0 / Math.Pow((double)(1 + discountRate), period);
-            return (decimal)factor;
         }
 
         private static int CalculateNumberOfIterations(NpvRequest request)

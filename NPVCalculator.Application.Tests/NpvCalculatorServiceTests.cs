@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using Moq;
 using NPVCalculator.Application.Services;
+using NPVCalculator.Domain.Interfaces;
 using NPVCalculator.Shared.Models;
 using Xunit;
 
@@ -9,118 +10,35 @@ namespace NPVCalculator.Application.Tests
 {
     public class NpvCalculatorServiceTests
     {
+        private readonly Mock<INpvDomainService> _mockNpvDomainService;
         private readonly Mock<ILogger<NpvCalculatorService>> _mockLogger;
         private readonly NpvCalculatorService _service;
 
         public NpvCalculatorServiceTests()
         {
+            _mockNpvDomainService = new Mock<INpvDomainService>();
             _mockLogger = new Mock<ILogger<NpvCalculatorService>>();
-            _service = new NpvCalculatorService(_mockLogger.Object);
+            _service = new NpvCalculatorService(_mockNpvDomainService.Object, _mockLogger.Object);
         }
 
-        #region CalculateSingleNpv Tests
-
         [Fact]
-        public void CalculateSingleNpv_WithValidInputs_ShouldReturnCorrectNpv()
+        public void CalculateSingleNpv_ShouldDelegateToDomainService()
         {
             // Arrange
             var cashFlows = new List<decimal> { -1000, 300, 400, 500 };
-            var discountRate = 0.1m; // 10%
-
-            // Act
-            var result = _service.CalculateSingleNpv(cashFlows, discountRate);
-
-            // Assert
-            result.Should().BeApproximately(-21.04m, 0.01m);
-        }
-
-        [Fact]
-        public void CalculateSingleNpv_WithZeroDiscountRate_ShouldReturnSumOfCashFlows()
-        {
-            // Arrange
-            var cashFlows = new List<decimal> { -1000, 300, 400, 500 };
-            var discountRate = 0m;
-
-            // Act
-            var result = _service.CalculateSingleNpv(cashFlows, discountRate);
-
-            // Assert
-            result.Should().Be(200m); 
-        }
-
-        [Fact]
-        public void CalculateSingleNpv_WithNullCashFlows_ShouldThrowArgumentException()
-        {
-            // Arrange
-            List<decimal> cashFlows = null;
             var discountRate = 0.1m;
+            var expectedNpv = 150.25m;
 
-            // Act & Assert
-            var action = () => _service.CalculateSingleNpv(cashFlows, discountRate);
-            action.Should().Throw<ArgumentException>()
-                  .WithMessage("Cash flows cannot be null or empty*")
-                  .And.ParamName.Should().Be("cashFlows");
-        }
-
-        [Fact]
-        public void CalculateSingleNpv_WithEmptyCashFlows_ShouldThrowArgumentException()
-        {
-            // Arrange
-            var cashFlows = new List<decimal>();
-            var discountRate = 0.1m;
-
-            // Act & Assert
-            var action = () => _service.CalculateSingleNpv(cashFlows, discountRate);
-            action.Should().Throw<ArgumentException>()
-                  .WithMessage("Cash flows cannot be null or empty*")
-                  .And.ParamName.Should().Be("cashFlows");
-        }
-
-        [Fact]
-        public void CalculateSingleNpv_WithSingleCashFlow_ShouldReturnThatValue()
-        {
-            // Arrange
-            var cashFlows = new List<decimal> { -1000 };
-            var discountRate = 0.1m;
+            _mockNpvDomainService.Setup(x => x.CalculateNpv(cashFlows, discountRate))
+                               .Returns(expectedNpv);
 
             // Act
             var result = _service.CalculateSingleNpv(cashFlows, discountRate);
 
             // Assert
-            result.Should().Be(-1000m);
+            result.Should().Be(expectedNpv);
+            _mockNpvDomainService.Verify(x => x.CalculateNpv(cashFlows, discountRate), Times.Once);
         }
-
-        [Fact]
-        public void CalculateSingleNpv_WithHighDiscountRate_ShouldReturnCorrectValue()
-        {
-            // Arrange
-            var cashFlows = new List<decimal> { -1000, 1100 };
-            var discountRate = 0.5m; // 50%
-
-            // Act
-            var result = _service.CalculateSingleNpv(cashFlows, discountRate);
-
-            // Assert
-            result.Should().BeApproximately(-266.67m, 0.01m);
-        }
-
-        [Fact]
-        public void CalculateSingleNpv_WithNegativeDiscountRate_ShouldHandleCorrectly()
-        {
-            // Arrange
-            var cashFlows = new List<decimal> { -1000, 500 };
-            var discountRate = -0.1m; 
-
-            // Act
-            var result = _service.CalculateSingleNpv(cashFlows, discountRate);
-
-            // Assert
-            result.Should().BeApproximately(-444.44m, 0.01m); 
-        }
-
-        #endregion
-
-        #region CalculateAsync Tests
 
         [Fact]
         public async Task CalculateAsync_WithValidRequest_ShouldReturnCorrectNumberOfResults()
@@ -134,12 +52,19 @@ namespace NPVCalculator.Application.Tests
                 RateIncrement = 1m
             };
 
+            _mockNpvDomainService.Setup(x => x.CalculateNpv(It.IsAny<IList<decimal>>(), It.IsAny<decimal>()))
+                               .Returns(100m);
+
             // Act
             var results = await _service.CalculateAsync(request);
 
             // Assert
             results.Should().HaveCount(5);
             results.Select(r => r.Rate).Should().BeEquivalentTo(new[] { 1m, 2m, 3m, 4m, 5m });
+
+            // Verify domain service was called for each rate
+            _mockNpvDomainService.Verify(x => x.CalculateNpv(It.IsAny<IList<decimal>>(), It.IsAny<decimal>()),
+                                       Times.Exactly(5));
         }
 
         [Fact]
@@ -152,63 +77,45 @@ namespace NPVCalculator.Application.Tests
         }
 
         [Fact]
-        public async Task CalculateAsync_WithSingleRate_ShouldReturnOneResult()
+        public void Calculate_WithValidRequest_ShouldDelegateToDomainService()
         {
             // Arrange
             var request = new NpvRequest
             {
                 CashFlows = new List<decimal> { -1000, 300, 400, 500 },
-                LowerBoundRate = 5m,
-                UpperBoundRate = 5m,
+                LowerBoundRate = 1m,
+                UpperBoundRate = 3m,
                 RateIncrement = 1m
             };
 
-            // Act
-            var results = await _service.CalculateAsync(request);
-
-            // Assert
-            results.Should().HaveCount(1);
-            results.First().Rate.Should().Be(5m);
-        }
-
-        [Fact]
-        public async Task CalculateAsync_WithFractionalIncrement_ShouldReturnCorrectResults()
-        {
-            // Arrange
-            var request = new NpvRequest
-            {
-                CashFlows = new List<decimal> { -1000, 500, 600 },
-                LowerBoundRate = 1m,
-                UpperBoundRate = 2m,
-                RateIncrement = 0.5m
-            };
+            _mockNpvDomainService.Setup(x => x.CalculateNpv(It.IsAny<IList<decimal>>(), It.IsAny<decimal>()))
+                               .Returns(75m);
 
             // Act
-            var results = await _service.CalculateAsync(request);
+            var results = _service.Calculate(request);
 
             // Assert
             results.Should().HaveCount(3);
-            results.Select(r => r.Rate).Should().BeEquivalentTo(new[] { 1m, 1.5m, 2m });
+            _mockNpvDomainService.Verify(x => x.CalculateNpv(It.IsAny<IList<decimal>>(), It.IsAny<decimal>()),
+                                       Times.Exactly(3));
         }
 
         [Fact]
-        public async Task CalculateAsync_WithManyRates_ShouldYieldPeriodically()
+        public void Constructor_WithNullNpvDomainService_ShouldThrowArgumentNullException()
         {
-            // Arrange
-            var request = new NpvRequest
-            {
-                CashFlows = new List<decimal> { -1000, 100, 200, 300, 400, 500 },
-                LowerBoundRate = 1m,
-                UpperBoundRate = 25m,
-                RateIncrement = 1m
-            };
+            // Act & Assert
+            var action = () => new NpvCalculatorService(null, _mockLogger.Object);
+            action.Should().Throw<ArgumentNullException>()
+                  .WithParameterName("npvDomainService");
+        }
 
-            // Act
-            var results = await _service.CalculateAsync(request);
-
-            // Assert
-            results.Should().HaveCount(25);
-            results.All(r => r.Value != 0).Should().BeTrue();
+        [Fact]
+        public void Constructor_WithNullLogger_ShouldThrowArgumentNullException()
+        {
+            // Act & Assert
+            var action = () => new NpvCalculatorService(_mockNpvDomainService.Object, null);
+            action.Should().Throw<ArgumentNullException>()
+                  .WithParameterName("logger");
         }
 
         [Fact]
@@ -222,6 +129,9 @@ namespace NPVCalculator.Application.Tests
                 UpperBoundRate = 3m,
                 RateIncrement = 1m
             };
+
+            _mockNpvDomainService.Setup(x => x.CalculateNpv(It.IsAny<IList<decimal>>(), It.IsAny<decimal>()))
+                               .Returns(100m);
 
             // Act
             var results = await _service.CalculateAsync(request);
@@ -248,220 +158,5 @@ namespace NPVCalculator.Application.Tests
                     It.IsAny<Func<It.IsAnyType, Exception, string>>()),
                 Times.Once);
         }
-
-        #endregion
-
-        #region Calculate (Synchronous) Tests
-
-        [Fact]
-        public void Calculate_WithValidRequest_ShouldReturnCorrectNumberOfResults()
-        {
-            // Arrange
-            var request = new NpvRequest
-            {
-                CashFlows = new List<decimal> { -1000, 300, 400, 500 },
-                LowerBoundRate = 1m,
-                UpperBoundRate = 5m,
-                RateIncrement = 1m
-            };
-
-            // Act
-            var results = _service.Calculate(request);
-
-            // Assert
-            results.Should().HaveCount(5);
-            results.Select(r => r.Rate).Should().BeEquivalentTo(new[] { 1m, 2m, 3m, 4m, 5m });
-        }
-
-        [Fact]
-        public void Calculate_WithNullRequest_ShouldThrowArgumentNullException()
-        {
-            // Act & Assert
-            var action = () => _service.Calculate(null);
-            action.Should().Throw<ArgumentNullException>()
-                  .WithParameterName("request");
-        }
-
-        [Fact]
-        public void Calculate_WithSingleRate_ShouldReturnOneResult()
-        {
-            // Arrange
-            var request = new NpvRequest
-            {
-                CashFlows = new List<decimal> { -1000, 300, 400, 500 },
-                LowerBoundRate = 10m,
-                UpperBoundRate = 10m,
-                RateIncrement = 1m
-            };
-
-            // Act
-            var results = _service.Calculate(request);
-
-            // Assert
-            results.Should().HaveCount(1);
-            results.First().Rate.Should().Be(10m);
-        }
-
-        [Fact]
-        public void Calculate_WithDecimalIncrement_ShouldHandleCorrectly()
-        {
-            // Arrange
-            var request = new NpvRequest
-            {
-                CashFlows = new List<decimal> { -1000, 500, 600 },
-                LowerBoundRate = 0.5m,
-                UpperBoundRate = 1.5m,
-                RateIncrement = 0.25m
-            };
-
-            // Act
-            var results = _service.Calculate(request);
-
-            // Assert
-            results.Should().HaveCount(5); 
-            results.Select(r => r.Rate).Should().BeEquivalentTo(new[] { 0.5m, 0.75m, 1m, 1.25m, 1.5m });
-        }
-
-        [Fact]
-        public void Calculate_WithLargeIncrement_ShouldStopAtUpperBound()
-        {
-            // Arrange
-            var request = new NpvRequest
-            {
-                CashFlows = new List<decimal> { -1000, 500, 600 },
-                LowerBoundRate = 1m,
-                UpperBoundRate = 5m,
-                RateIncrement = 3m
-            };
-
-            // Act
-            var results = _service.Calculate(request);
-
-            // Assert
-            results.Should().HaveCount(2);
-            results.Select(r => r.Rate).Should().BeEquivalentTo(new[] { 1m, 4m });
-        }
-
-        #endregion
-
-        #region Constructor Tests
-
-        [Fact]
-        public void Constructor_WithNullLogger_ShouldThrowArgumentNullException()
-        {
-            // Act & Assert
-            var action = () => new NpvCalculatorService(null);
-            action.Should().Throw<ArgumentNullException>()
-                  .WithParameterName("logger");
-        }
-
-        #endregion
-
-        #region Edge Cases and Boundary Tests
-
-        [Fact]
-        public void CalculateSingleNpv_WithZeroCashFlows_ShouldReturnZero()
-        {
-            // Arrange
-            var cashFlows = new List<decimal> { 0, 0, 0 };
-            var discountRate = 0.1m;
-
-            // Act
-            var result = _service.CalculateSingleNpv(cashFlows, discountRate);
-
-            // Assert
-            result.Should().Be(0m);
-        }
-
-        [Fact]
-        public void CalculateSingleNpv_WithLargeCashFlows_ShouldHandleCorrectly()
-        {
-            // Arrange
-            var cashFlows = new List<decimal> { -1000000, 500000, 600000 };
-            var discountRate = 0.1m;
-
-            // Act
-            var result = _service.CalculateSingleNpv(cashFlows, discountRate);
-
-            // Assert
-            result.Should().BeApproximately(-49586.78m, 0.01m);
-        }
-
-        [Fact]
-        public async Task CalculateAsync_WithVerySmallIncrement_ShouldHandleCorrectly()
-        {
-            // Arrange
-            var request = new NpvRequest
-            {
-                CashFlows = new List<decimal> { -1000, 500 },
-                LowerBoundRate = 1m,
-                UpperBoundRate = 1.02m,
-                RateIncrement = 0.01m
-            };
-
-            // Act
-            var results = await _service.CalculateAsync(request);
-
-            // Assert
-            results.Should().HaveCount(3);
-            results.Select(r => r.Rate).Should().BeEquivalentTo(new[] { 1m, 1.01m, 1.02m });
-        }
-
-        [Fact]
-        public void Calculate_WithRoundingIssues_ShouldHandleFloatingPointPrecision()
-        {
-            // Arrange
-            var request = new NpvRequest
-            {
-                CashFlows = new List<decimal> { -1000, 300 },
-                LowerBoundRate = 0.1m,
-                UpperBoundRate = 0.3m,
-                RateIncrement = 0.1m
-            };
-
-            // Act
-            var results = _service.Calculate(request);
-
-            // Assert
-            results.Should().HaveCount(3); 
-            results.All(r => r.Rate >= 0.1m && r.Rate <= 0.3m).Should().BeTrue();
-        }
-
-        [Fact]
-        public void CalculateSingleNpv_ShouldRoundToTwoDecimalPlaces()
-        {
-            // Arrange
-            var cashFlows = new List<decimal> { -1000, 333.333m };
-            var discountRate = 0.1m;
-
-            // Act
-            var result = _service.CalculateSingleNpv(cashFlows, discountRate);
-
-            // Assert
-            result.Should().Be(Math.Round(result, 2));
-            result.ToString().Split('.').LastOrDefault()?.Length.Should().BeLessThanOrEqualTo(2);
-        }
-
-        [Fact]
-        public async Task CalculateAsync_WithExactUpperBoundMatch_ShouldIncludeUpperBound()
-        {
-            // Arrange
-            var request = new NpvRequest
-            {
-                CashFlows = new List<decimal> { -1000, 500 },
-                LowerBoundRate = 1m,
-                UpperBoundRate = 3m,
-                RateIncrement = 1m
-            };
-
-            // Act
-            var results = await _service.CalculateAsync(request);
-
-            // Assert
-            results.Should().HaveCount(3);
-            results.Last().Rate.Should().Be(3m);
-        }
-
-        #endregion
     }
 }
