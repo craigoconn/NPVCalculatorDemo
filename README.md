@@ -171,10 +171,8 @@ dotnet test
 ## **Performance Considerations**
 
 - **Asynchronous Processing**: CPU-intensive calculations use `Task.Run()` with periodic yielding
-- **Progress Logging**: Large calculations show progress updates
 - **Input Validation**: Prevents excessive computation requests
 - **Response Compression**: Optimized data transfer
-- **Efficient Algorithms**: Optimized NPV calculation implementation
 
 ## **Input Validation**
 
