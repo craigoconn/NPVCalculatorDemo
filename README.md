@@ -26,16 +26,15 @@ This application calculates Net Present Value for a series of cash flows across 
                        └─────────────────┘
                                 │
                        ┌─────────────────┐
-                       │ Infrastructure  │
-                       │ (External Deps) │
+                       │     Shared      │
+                       │ (Common Models) │
                        └─────────────────┘
 ```
 
 ### **Project Structure**
 - **NPVCalculator.API** - RESTful Web API controllers and configuration
-- **NPVCalculator.Application** - Business logic and services
+- **NPVCalculator.Application** - Business logic services and dependency injection
 - **NPVCalculator.Domain** - Core business entities and interfaces
-- **NPVCalculator.Infrastructure** - Dependency injection and external concerns
 - **NPVCalculator.Shared** - Data transfer objects and shared models
 - **NPVCalculator.Client** - Blazor WebAssembly frontend application
 
@@ -140,48 +139,38 @@ Visit `https://localhost:7191/swagger` for interactive API documentation.
 4. **View Results**: See tabular data and interactive chart
 5. **Analyze**: Green rows indicate positive NPV (profitable investments)
 
-## **SOLID Principles Implementation**
-
-### **Single Responsibility Principle**
-- `NpvCalculatorService`: Only handles NPV calculations
-- `ValidationService`: Only handles input validation
-- `NpvController`: Only handles HTTP concerns
-
-### **Open/Closed Principle**
-- Services can be extended without modification
-- New validation rules can be added easily
-- Interface-based design allows new implementations
-
-### **Liskov Substitution Principle**
-- All implementations are substitutable for their interfaces
-- No breaking behavior changes in derived classes
-
-### **Interface Segregation Principle**
-- `INpvCalculator`: Focused calculation methods
-- `IValidationService`: Focused validation methods
-- No unnecessary method dependencies
-
-### **Dependency Inversion Principle**
-- High-level modules depend on abstractions
-- Dependency injection throughout the application
-- Loose coupling between layers
 
 ## **Testing Strategy**
 
-### **Unit Tests** (Planned)
-- Business logic validation
-- NPV calculation accuracy
-- Edge case handling
-- Validation rule testing
+### **Unit Tests**
+Run backend tests:
+```bash
+cd NPVCalculator.API.Tests
+dotnet test
 
-### **Integration Tests** (Planned)
-- API endpoint testing
-- End-to-end calculation workflows
-- Error handling scenarios
+cd NPVCalculator.Application.Tests
+dotnet test
+
+cd NPVCalculator.Domain.Tests
+dotnet test
+```
+
+Run frontend tests:
+```bash
+cd NPVCalculator.Client.Tests
+dotnet test
+```
+
+### **Test Coverage**
+- Business logic validation and NPV calculation accuracy
+- API endpoint testing with mocked dependencies
+- Component rendering and user interaction testing
+- HTTP service testing with various response scenarios
+- Input validation and error handling
 
 ## **Performance Considerations**
 
-- **Asynchronous Processing**: CPU-intensive calculations use `Task.Run()`
+- **Asynchronous Processing**: CPU-intensive calculations use `Task.Run()` with periodic yielding
 - **Progress Logging**: Large calculations show progress updates
 - **Input Validation**: Prevents excessive computation requests
 - **Response Compression**: Optimized data transfer
@@ -191,15 +180,17 @@ Visit `https://localhost:7191/swagger` for interactive API documentation.
 
 ### **Business Rules**
 - Cash flows: At least one required, maximum 1,000 entries
-- Discount rates: 0% to 1,000% range
+- Discount rates: -100% to 1,000% range
 - Rate increment: Minimum 0.01%
 - Maximum calculations: 10,000 per request
+- Individual cash flow values: Cannot exceed ±$1 trillion
 
-### **Data Validation**
+### **Validation Features**
 - Numeric format validation
 - Range boundary checking
 - Performance limit enforcement
-- Business logic validation (e.g., initial investment typically negative)
+- Business logic warnings (e.g., initial investment typically negative)
+- Client-side and server-side validation
 
 ## **NPV Calculation Reference**
 
@@ -212,6 +203,22 @@ Where:
 - **r** = Discount rate (as decimal)
 - **t** = Time period (0, 1, 2, ...)
 
+### **Sample Calculation**
+
+**Input:**
+- Cash Flows: [-1000, 300, 400, 500]
+- Discount Rate: 10%
+
+**Calculation:**
+```
+NPV = -1000/(1+0.10)⁰ + 300/(1+0.10)¹ + 400/(1+0.10)² + 500/(1+0.10)³
+NPV = -1000/1 + 300/1.10 + 400/1.21 + 500/1.331
+NPV = -1000 + 272.73 + 330.58 + 375.66
+NPV = -21.03
+```
+
+**Result:** Negative NPV indicates the investment may not be profitable at 10% discount rate.
+
 ### **Learn More About NPV**
 - [Investopedia NPV Guide](https://www.investopedia.com/terms/n/npv.asp)
 - [Corporate Finance Institute NPV Tutorial](https://corporatefinanceinstitute.com/resources/valuation/net-present-value-npv/)
@@ -220,21 +227,41 @@ Where:
 
 ### **Backend**
 - ASP.NET Core 8.0 Web API
-- Entity Framework Core (ready for database integration)
-- Serilog for structured logging
-- Swagger/OpenAPI for documentation
+- Microsoft.Extensions.Logging for structured logging
+- Swashbuckle.AspNetCore for API documentation
+- System.Text.Json for serialization
 
 ### **Frontend**
 - Blazor WebAssembly 8.0
-- Bootstrap 5 for styling
+- Bootstrap 5 for responsive styling
 - Chart.js for data visualization
-- Blazorise component library
+- System.Net.Http.Json for API communication
 
-### **Development Tools**
-- Visual Studio 2022
-- Git for version control
+### **Testing**
+- xUnit testing framework
+- FluentAssertions for readable assertions
+- Moq for mocking dependencies
+- bUnit for Blazor component testing
 
+## **Project Components**
 
+### **Backend Services**
+- **NpvCalculatorService**: Core NPV calculation logic
+- **ValidationService**: Input validation and business rules
+- **NpvController**: HTTP request handling and response formatting
+
+### **Frontend Components**
+- **NpvInputForm**: User input form with validation
+- **NpvResults**: Results table with color-coded values
+- **NpvChart**: Interactive Chart.js visualization
+- **Calculate**: Main page component orchestrating the workflow
+
+### **Frontend Services**
+- **NpvCalculationService**: Orchestrates calculation workflow
+- **NpvService**: HTTP client for API communication
+- **ChartService**: Chart.js integration and rendering
+- **InputValidationService**: Client-side input validation
+- 
 ## **Sample Calculation**
 
 **Input:**
