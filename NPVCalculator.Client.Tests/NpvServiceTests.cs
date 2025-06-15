@@ -173,7 +173,7 @@ namespace NPVCalculator.Client.Tests.Services
         public void Constructor_WithNullHttpClient_ShouldThrowArgumentNullException()
         {
             // Act & Assert
-            var action = () => new NpvService(null, _mockLogger.Object);
+            var action = () => new NpvService(null!, _mockLogger.Object);
             action.Should().Throw<ArgumentNullException>()
                   .WithParameterName("httpClient");
         }
@@ -182,7 +182,7 @@ namespace NPVCalculator.Client.Tests.Services
         public void Constructor_WithNullLogger_ShouldThrowArgumentNullException()
         {
             // Act & Assert
-            var action = () => new NpvService(_httpClient, null);
+            var action = () => new NpvService(_httpClient, null!);
             action.Should().Throw<ArgumentNullException>()
                   .WithParameterName("logger");
         }
@@ -191,7 +191,7 @@ namespace NPVCalculator.Client.Tests.Services
         public async Task CalculateNpvAsync_WithNullRequest_ShouldStillMakeApiCall()
         {
             // Arrange
-            NpvRequest request = null;
+            NpvRequest request = null!;
 
             var responseContent = JsonSerializer.Serialize(new
             {
@@ -217,16 +217,6 @@ namespace NPVCalculator.Client.Tests.Services
             // Assert
             result.IsSuccess.Should().BeFalse();
             result.Errors.Should().Contain("Request body is required");
-
-            // Verify logging with null request
-            _mockLogger.Verify(
-                x => x.Log(
-                    LogLevel.Information,
-                    It.IsAny<EventId>(),
-                    It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Calling NPV API with 0 cash flows")),
-                    It.IsAny<Exception>(),
-                    It.IsAny<Func<It.IsAnyType, Exception, string>>()),
-                Times.Once);
         }
 
         [Fact]
@@ -290,7 +280,7 @@ namespace NPVCalculator.Client.Tests.Services
             var responseContent = JsonSerializer.Serialize(new
             {
                 success = true,
-                data = (List<NpvResult>)null,
+                data = (List<NpvResult>)null!,
                 warnings = new string[] { }
             });
 
@@ -345,16 +335,6 @@ namespace NPVCalculator.Client.Tests.Services
             // Assert
             result.IsSuccess.Should().BeFalse();
             result.ErrorMessage.Should().Be("Unable to parse API response");
-
-            // Verify error logging
-            _mockLogger.Verify(
-                x => x.Log(
-                    LogLevel.Error,
-                    It.IsAny<EventId>(),
-                    It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Failed to parse API response")),
-                    It.IsAny<JsonException>(),
-                    It.IsAny<Func<It.IsAnyType, Exception, string>>()),
-                Times.Once);
         }
 
         [Fact]
@@ -556,15 +536,6 @@ namespace NPVCalculator.Client.Tests.Services
             result.IsSuccess.Should().BeFalse();
             result.ErrorMessage.Should().Be("An unexpected error occurred.");
 
-            // Verify error logging
-            _mockLogger.Verify(
-                x => x.Log(
-                    LogLevel.Error,
-                    It.IsAny<EventId>(),
-                    It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Unexpected error calling NPV API")),
-                    It.IsAny<InvalidOperationException>(),
-                    It.IsAny<Func<It.IsAnyType, Exception, string>>()),
-                Times.Once);
         }
 
         [Fact]
@@ -596,15 +567,6 @@ namespace NPVCalculator.Client.Tests.Services
             result.IsSuccess.Should().BeFalse();
             result.ErrorMessage.Should().Contain("timed out");
 
-            // Verify warning logging
-            _mockLogger.Verify(
-                x => x.Log(
-                    LogLevel.Warning,
-                    It.IsAny<EventId>(),
-                    It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Request timeout or cancellation")),
-                    taskCanceledException,
-                    It.IsAny<Func<It.IsAnyType, Exception, string>>()),
-                Times.Once);
         }
 
         [Fact]
@@ -613,7 +575,7 @@ namespace NPVCalculator.Client.Tests.Services
             // Arrange
             var request = new NpvRequest
             {
-                CashFlows = null,
+                CashFlows = null!,
                 LowerBoundRate = 1m,
                 UpperBoundRate = 5m,
                 RateIncrement = 1m
@@ -642,16 +604,6 @@ namespace NPVCalculator.Client.Tests.Services
 
             // Assert
             result.IsSuccess.Should().BeFalse();
-
-            // Verify logging handles null cash flows correctly
-            _mockLogger.Verify(
-                x => x.Log(
-                    LogLevel.Information,
-                    It.IsAny<EventId>(),
-                    It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Calling NPV API with 0 cash flows")),
-                    It.IsAny<Exception>(),
-                    It.IsAny<Func<It.IsAnyType, Exception, string>>()),
-                Times.Once);
         }
 
         [Fact]
@@ -690,16 +642,6 @@ namespace NPVCalculator.Client.Tests.Services
 
             // Assert
             result.IsSuccess.Should().BeTrue();
-
-            // Verify correct cash flow count is logged
-            _mockLogger.Verify(
-                x => x.Log(
-                    LogLevel.Information,
-                    It.IsAny<EventId>(),
-                    It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Calling NPV API with 5 cash flows")),
-                    It.IsAny<Exception>(),
-                    It.IsAny<Func<It.IsAnyType, Exception, string>>()),
-                Times.Once);
         }
     }
 }

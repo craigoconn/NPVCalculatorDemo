@@ -98,7 +98,7 @@ namespace NPVCalculator.Application.Services
 
             if (request.CashFlows != null)
             {
-                if (request.CashFlows.All(cf => cf >= 0))
+                if (request.CashFlows.TrueForAll(cf => cf >= 0))
                 {
                     result.AddWarning("All cash flows are positive - unusual for NPV calculations");
                 }

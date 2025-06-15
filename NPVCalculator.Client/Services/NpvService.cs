@@ -57,15 +57,28 @@ namespace NPVCalculator.Client.Services
         {
             try
             {
-                var response = await httpResponse.Content.ReadFromJsonAsync<StandardApiResponse>(_jsonOptions);
+                var response = await httpResponse.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
 
-                if (response?.Success == true)
+                if (response.TryGetProperty("success", out var successProp) && successProp.GetBoolean())
                 {
+                    var data = new List<NpvResult>();
+                    var warnings = new List<string>();
+
+                    if (response.TryGetProperty("data", out var dataProp))
+                    {
+                        data = JsonSerializer.Deserialize<List<NpvResult>>(dataProp.GetRawText(), _jsonOptions) ?? [];
+                    }
+
+                    if (response.TryGetProperty("warnings", out var warningsProp))
+                    {
+                        warnings = JsonSerializer.Deserialize<List<string>>(warningsProp.GetRawText(), _jsonOptions) ?? [];
+                    }
+
                     return new ApiResponse<List<NpvResult>>
                     {
                         IsSuccess = true,
-                        Data = response.Data ?? [],
-                        Errors = response.Warnings?.Select(w => $"Warning: {w}").ToList() ?? []
+                        Data = data,
+                        Errors = warnings.Select(w => $"Warning: {w}").ToList()
                     };
                 }
             }
@@ -83,15 +96,22 @@ namespace NPVCalculator.Client.Services
 
             try
             {
-                var errorResponse = JsonSerializer.Deserialize<StandardErrorResponse>(errorContent, _jsonOptions);
-                if (errorResponse?.Success == false && errorResponse.Errors?.Any() == true)
+                var errorResponse = JsonSerializer.Deserialize<JsonElement>(errorContent, _jsonOptions);
+
+                if (errorResponse.TryGetProperty("success", out var successProp) &&
+                    !successProp.GetBoolean() &&
+                    errorResponse.TryGetProperty("errors", out var errorsProp))
                 {
-                    return new ApiResponse<List<NpvResult>>
+                    var errors = JsonSerializer.Deserialize<string[]>(errorsProp.GetRawText(), _jsonOptions);
+                    if (errors?.Any() == true)
                     {
-                        IsSuccess = false,
-                        Errors = errorResponse.Errors.ToList(),
-                        ErrorMessage = "Validation errors occurred"
-                    };
+                        return new ApiResponse<List<NpvResult>>
+                        {
+                            IsSuccess = false,
+                            Errors = errors.ToList(),
+                            ErrorMessage = "Validation errors occurred"
+                        };
+                    }
                 }
             }
             catch (JsonException)
@@ -116,18 +136,5 @@ namespace NPVCalculator.Client.Services
                 ErrorMessage = errorMessage,
                 Errors = [errorMessage]
             };
-
-        private class StandardApiResponse
-        {
-            public bool Success { get; set; }
-            public List<NpvResult>? Data { get; set; }
-            public List<string>? Warnings { get; set; }
-        }
-
-        private class StandardErrorResponse
-        {
-            public bool Success { get; set; }
-            public string[]? Errors { get; set; }
-        }
     }
 }

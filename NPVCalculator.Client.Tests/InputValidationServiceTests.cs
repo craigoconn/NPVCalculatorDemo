@@ -70,7 +70,7 @@ namespace NPVCalculator.Client.Tests.Services
 
             // Assert
             result.IsValid.Should().BeFalse();
-            result.Errors.Should().Contain("Invalid cash flows format");
+            result.Errors.Should().Contain("Invalid cash flow values: abc");
         }
 
         [Fact]

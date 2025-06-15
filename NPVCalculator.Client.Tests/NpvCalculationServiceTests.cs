@@ -26,7 +26,7 @@ namespace NPVCalculator.Client.Tests.Services
         public void Constructor_WithNullNpvService_ShouldThrowArgumentNullException()
         {
             // Act & Assert
-            var action = () => new NpvCalculationService(null, _mockInputValidator.Object);
+            var action = () => new NpvCalculationService(null!, _mockInputValidator.Object);
             action.Should().Throw<ArgumentNullException>()
                   .WithParameterName("npvService");
         }
@@ -35,7 +35,7 @@ namespace NPVCalculator.Client.Tests.Services
         public void Constructor_WithNullInputValidator_ShouldThrowArgumentNullException()
         {
             // Act & Assert
-            var action = () => new NpvCalculationService(_mockNpvService.Object, null);
+            var action = () => new NpvCalculationService(_mockNpvService.Object, null!);
             action.Should().Throw<ArgumentNullException>()
                   .WithParameterName("inputValidator");
         }
@@ -99,10 +99,6 @@ namespace NPVCalculator.Client.Tests.Services
             result.ResultType.Should().Be(NpvCalculationResultType.Success);
         }
 
-        #endregion
-
-        #region Validation Failure Scenarios
-
         [Fact]
         public async Task ProcessCalculationAsync_WithInvalidInput_ShouldReturnValidationFailure()
         {
@@ -151,10 +147,6 @@ namespace NPVCalculator.Client.Tests.Services
             result.ResultType.Should().Be(NpvCalculationResultType.ValidationFailure);
         }
 
-        #endregion
-
-        #region Service Failure Scenarios
-
         [Fact]
         public async Task ProcessCalculationAsync_WithServiceFailure_ShouldReturnServiceFailure()
         {
@@ -192,7 +184,7 @@ namespace NPVCalculator.Client.Tests.Services
             var apiResponse = new ApiResponse<List<NpvResult>>
             {
                 IsSuccess = false,
-                Errors = null
+                Errors = null!
             };
 
             _mockInputValidator.Setup(x => x.ValidateInput(inputModel))
@@ -208,10 +200,6 @@ namespace NPVCalculator.Client.Tests.Services
             result.Errors.Should().BeEmpty();
             result.ResultType.Should().Be(NpvCalculationResultType.ServiceFailure);
         }
-
-        #endregion
-
-        #region Exception Scenarios
 
         [Fact]
         public async Task ProcessCalculationAsync_WithValidationException_ShouldReturnExceptionFailure()
@@ -279,7 +267,7 @@ namespace NPVCalculator.Client.Tests.Services
             result.IsSuccess.Should().BeFalse();
             result.ResultType.Should().Be(NpvCalculationResultType.ExceptionFailure);
             result.Errors.Should().HaveCount(1);
-            result.Errors.First().Should().StartWith("Error:");
+            result.Errors[0].Should().StartWith("Error:");
         }
 
         [Fact]
@@ -342,7 +330,7 @@ namespace NPVCalculator.Client.Tests.Services
         public async Task ProcessCalculationAsync_WithNullInputModel_ShouldHandleGracefully()
         {
             // Arrange
-            NpvInputModel inputModel = null;
+            NpvInputModel inputModel = null!;
             var expectedException = new ArgumentNullException(nameof(inputModel));
 
             _mockInputValidator.Setup(x => x.ValidateInput(inputModel))
@@ -355,7 +343,7 @@ namespace NPVCalculator.Client.Tests.Services
             result.IsSuccess.Should().BeFalse();
             result.ResultType.Should().Be(NpvCalculationResultType.ExceptionFailure);
             result.Errors.Should().HaveCount(1);
-            result.Errors.First().Should().StartWith("Error:");
+            result.Errors[0].Should().StartWith("Error:");
         }
 
         [Fact]
@@ -399,10 +387,6 @@ namespace NPVCalculator.Client.Tests.Services
                 req.UpperBoundRate == 8m &&
                 req.RateIncrement == 2m)), Times.Once);
         }
-
-        #endregion
-
-        #region NpvCalculationResult Factory Method Tests
 
         [Fact]
         public void NpvCalculationResult_Success_ShouldCreateSuccessResult()
@@ -480,9 +464,6 @@ namespace NPVCalculator.Client.Tests.Services
             result.ResultType.Should().Be(NpvCalculationResultType.ExceptionFailure);
         }
 
-        #endregion
-
-        #region Helper Methods
 
         private static NpvInputModel CreateValidInputModel()
         {

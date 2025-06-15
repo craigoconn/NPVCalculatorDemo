@@ -42,7 +42,7 @@ namespace NPVCalculator.Application.Tests
         public void ValidateNpvRequest_WithNullRequest_ShouldReturnInvalidResult()
         {
             // Act
-            var result = _service.ValidateNpvRequest(null);
+            var result = _service.ValidateNpvRequest(null!);
 
             // Assert
             result.IsValid.Should().BeFalse();

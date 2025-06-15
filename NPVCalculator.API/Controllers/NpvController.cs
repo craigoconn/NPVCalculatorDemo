@@ -2,6 +2,7 @@
 using NPVCalculator.Domain.Entities;
 using NPVCalculator.Domain.Interfaces;
 using NPVCalculator.Shared.Models;
+using System.Net;
 
 namespace NPVCalculator.API.Controllers
 {
@@ -66,6 +67,7 @@ namespace NPVCalculator.API.Controllers
             new { success = true, data, warnings = warnings.ToArray() };
 
         [HttpGet("health")]
+        [ProducesResponseType(typeof(OkObjectResult), (int)HttpStatusCode.OK)]
         public IActionResult Health()
         {
             return Ok(new { status = "healthy", timestamp = DateTime.UtcNow });

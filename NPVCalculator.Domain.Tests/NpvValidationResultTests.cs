@@ -48,7 +48,7 @@ namespace NPVCalculator.Domain.Tests
             var result = new NpvValidationResult();
 
             // Act
-            result.AddError(null);
+            result.AddError(null!);
             result.AddError("");
             result.AddError("   ");
 

@@ -43,7 +43,7 @@ namespace NPVCalculator.Client.Tests.Components
         public void NpvResults_WithNoResults_ShouldNotRender()
         {
             // Arrange
-            List<NpvResult> results = null;
+            List<NpvResult> results = null!;
 
             // Act
             var component = RenderComponent<NpvResults>(parameters => parameters

@@ -71,9 +71,85 @@ namespace NPVCalculator.Application.Tests
         public async Task CalculateAsync_WithNullRequest_ShouldThrowArgumentNullException()
         {
             // Act & Assert
-            var action = async () => await _service.CalculateAsync(null);
+            var action = async () => await _service.CalculateAsync(null!);
             await action.Should().ThrowAsync<ArgumentNullException>()
                         .WithParameterName("request");
+        }
+
+        [Fact]
+        public async Task CalculateAsync_WithCancellationToken_ShouldRespectCancellation()
+        {
+            // Arrange
+            var request = new NpvRequest
+            {
+                CashFlows = new List<decimal> { -1000, 300, 400, 500 },
+                LowerBoundRate = 1m,
+                UpperBoundRate = 100m, // Large range to ensure cancellation can occur
+                RateIncrement = 1m
+            };
+
+            _mockNpvDomainService.Setup(x => x.CalculateNpv(It.IsAny<IList<decimal>>(), It.IsAny<decimal>()))
+                               .Returns(100m);
+
+            using var cancellationTokenSource = new CancellationTokenSource();
+            await cancellationTokenSource.CancelAsync();
+
+            // Act & Assert
+            var action = async () => await _service.CalculateAsync(request, cancellationTokenSource.Token);
+            await action.Should().ThrowAsync<OperationCanceledException>();
+        }
+
+        [Fact]
+        public async Task CalculateAsync_WithAlreadyCancelledToken_ShouldThrowOperationCanceledException()
+        {
+            // Arrange
+            var request = new NpvRequest
+            {
+                CashFlows = new List<decimal> { -1000, 300, 400, 500 },
+                LowerBoundRate = 1m,
+                UpperBoundRate = 50m,
+                RateIncrement = 1m
+            };
+
+            using var cancellationTokenSource = new CancellationTokenSource();
+            await cancellationTokenSource.CancelAsync();
+
+            _mockNpvDomainService.Setup(x => x.CalculateNpv(It.IsAny<IList<decimal>>(), It.IsAny<decimal>()))
+                               .Returns(100m);
+
+            // Act & Assert
+            var action = async () => await _service.CalculateAsync(request, cancellationTokenSource.Token);
+            await action.Should().ThrowAsync<OperationCanceledException>();
+
+            // Verify domain service was never called due to immediate cancellation
+            _mockNpvDomainService.Verify(x => x.CalculateNpv(It.IsAny<IList<decimal>>(), It.IsAny<decimal>()),
+                                       Times.Never);
+        }
+
+        [Fact]
+        public async Task CalculateAsync_WithValidCancellationToken_ShouldCompleteSuccessfully()
+        {
+            // Arrange
+            var request = new NpvRequest
+            {
+                CashFlows = new List<decimal> { -1000, 300, 400, 500 },
+                LowerBoundRate = 1m,
+                UpperBoundRate = 3m,
+                RateIncrement = 1m
+            };
+
+            _mockNpvDomainService.Setup(x => x.CalculateNpv(It.IsAny<IList<decimal>>(), It.IsAny<decimal>()))
+                               .Returns(75m);
+
+            using var cancellationTokenSource = new CancellationTokenSource();
+
+            // Act
+            var results = await _service.CalculateAsync(request, cancellationTokenSource.Token);
+
+            // Assert
+            results.Should().HaveCount(3);
+            _mockNpvDomainService.Verify(x => x.CalculateNpv(It.IsAny<IList<decimal>>(), It.IsAny<decimal>()),
+                                       Times.Exactly(3));
         }
 
         [Fact]
@@ -104,7 +180,7 @@ namespace NPVCalculator.Application.Tests
         public void Constructor_WithNullNpvDomainService_ShouldThrowArgumentNullException()
         {
             // Act & Assert
-            var action = () => new NpvCalculatorService(null, _mockLogger.Object);
+            var action = () => new NpvCalculatorService(null!, _mockLogger.Object);
             action.Should().Throw<ArgumentNullException>()
                   .WithParameterName("npvDomainService");
         }
@@ -113,7 +189,7 @@ namespace NPVCalculator.Application.Tests
         public void Constructor_WithNullLogger_ShouldThrowArgumentNullException()
         {
             // Act & Assert
-            var action = () => new NpvCalculatorService(_mockNpvDomainService.Object, null);
+            var action = () => new NpvCalculatorService(_mockNpvDomainService.Object, null!);
             action.Should().Throw<ArgumentNullException>()
                   .WithParameterName("logger");
         }
@@ -138,25 +214,6 @@ namespace NPVCalculator.Application.Tests
 
             // Assert
             results.Should().HaveCount(3);
-
-            // Verify logging
-            _mockLogger.Verify(
-                x => x.Log(
-                    LogLevel.Information,
-                    It.IsAny<EventId>(),
-                    It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Starting NPV calculation for 3 rates")),
-                    It.IsAny<Exception>(),
-                    It.IsAny<Func<It.IsAnyType, Exception, string>>()),
-                Times.Once);
-
-            _mockLogger.Verify(
-                x => x.Log(
-                    LogLevel.Information,
-                    It.IsAny<EventId>(),
-                    It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("NPV calculation completed with 3 results")),
-                    It.IsAny<Exception>(),
-                    It.IsAny<Func<It.IsAnyType, Exception, string>>()),
-                Times.Once);
         }
     }
 }

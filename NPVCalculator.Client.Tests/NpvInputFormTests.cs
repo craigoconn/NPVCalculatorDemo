@@ -95,7 +95,7 @@ namespace NPVCalculator.Client.Tests.Components
             inputs.Should().NotBeEmpty();
 
             // Find the cash flow input (first input)
-            var cashFlowInput = inputs.First();
+            var cashFlowInput = inputs[0];
             cashFlowInput.ClassList.Should().Contain("is-invalid");
 
             var invalidFeedback = component.Find(".invalid-feedback");

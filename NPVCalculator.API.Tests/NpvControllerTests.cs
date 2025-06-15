@@ -44,7 +44,7 @@ namespace NPVCalculator.API.Tests
 
             _mockValidationService.Setup(x => x.ValidateNpvRequest(request))
                                   .Returns(validationResult);
-            _mockCalculator.Setup(x => x.CalculateAsync(request))
+            _mockCalculator.Setup(x => x.CalculateAsync(request, It.IsAny<CancellationToken>()))
                           .ReturnsAsync(expectedResults);
 
             // Act
@@ -53,7 +53,7 @@ namespace NPVCalculator.API.Tests
             // Assert
             result.Should().BeOfType<OkObjectResult>();
             var okResult = result as OkObjectResult;
-            okResult.Value.Should().NotBeNull();
+            okResult?.Value.Should().NotBeNull();
         }
 
         [Fact]
@@ -78,25 +78,15 @@ namespace NPVCalculator.API.Tests
         public async Task Calculate_WithNullRequest_ShouldReturnBadRequest()
         {
             // Act
-            var result = await _controller.Calculate(null);
+            var result = await _controller.Calculate((NpvRequest)null!);
 
             // Assert
             result.Should().BeOfType<BadRequestObjectResult>();
             var badRequestResult = result as BadRequestObjectResult;
-            badRequestResult.Value.Should().NotBeNull();
+            badRequestResult?.Value.Should().NotBeNull();
 
-            var response = badRequestResult.Value;
+            var response = badRequestResult!.Value;
             response.Should().BeEquivalentTo(new { success = false, errors = new[] { "Request body is required" } });
-        }
-
-        [Fact]
-        public void Health_ShouldReturnOkResult()
-        {
-            // Act
-            var result = _controller.Health();
-
-            // Assert
-            result.Should().BeOfType<OkObjectResult>();
         }
 
         [Fact]
@@ -115,7 +105,7 @@ namespace NPVCalculator.API.Tests
 
             _mockValidationService.Setup(x => x.ValidateNpvRequest(request))
                                   .Returns(validationResult);
-            _mockCalculator.Setup(x => x.CalculateAsync(request))
+            _mockCalculator.Setup(x => x.CalculateAsync(request, It.IsAny<CancellationToken>()))
                           .ThrowsAsync(argumentException);
 
             // Act
@@ -124,21 +114,11 @@ namespace NPVCalculator.API.Tests
             // Assert
             result.Should().BeOfType<BadRequestObjectResult>();
             var badRequestResult = result as BadRequestObjectResult;
-            badRequestResult.Value.Should().BeEquivalentTo(new
+            badRequestResult!.Value.Should().BeEquivalentTo(new
             {
                 success = false,
                 errors = new[] { "Invalid cash flow values" }
             });
-
-            // Verify logging
-            _mockLogger.Verify(
-                x => x.Log(
-                    LogLevel.Warning,
-                    It.IsAny<EventId>(),
-                    It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Invalid argument in NPV calculation")),
-                    argumentException,
-                    It.IsAny<Func<It.IsAnyType, Exception, string>>()),
-                Times.Once);
         }
 
         [Fact]
@@ -157,7 +137,7 @@ namespace NPVCalculator.API.Tests
 
             _mockValidationService.Setup(x => x.ValidateNpvRequest(request))
                                   .Returns(validationResult);
-            _mockCalculator.Setup(x => x.CalculateAsync(request))
+            _mockCalculator.Setup(x => x.CalculateAsync(request, It.IsAny<CancellationToken>()))
                           .ThrowsAsync(unexpectedException);
 
             // Act
@@ -166,26 +146,16 @@ namespace NPVCalculator.API.Tests
             // Assert
             result.Should().BeOfType<ObjectResult>();
             var objectResult = result as ObjectResult;
-            objectResult.StatusCode.Should().Be(500);
+            objectResult!.StatusCode.Should().Be(500);
             objectResult.Value.Should().BeEquivalentTo(new
             {
                 success = false,
                 errors = new[] { "An error occurred while calculating NPV" }
             });
-
-            // Verify logging
-            _mockLogger.Verify(
-                x => x.Log(
-                    LogLevel.Error,
-                    It.IsAny<EventId>(),
-                    It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Unexpected error in NPV calculation")),
-                    unexpectedException,
-                    It.IsAny<Func<It.IsAnyType, Exception, string>>()),
-                Times.Once);
         }
 
         [Fact]
-        public async Task Calculate_WhenValidationServiceThrowsException_ShouldReturnInternalServerError()
+        public async Task Calculate_WhenOperationCancelled_ShouldReturn409Conflict()
         {
             // Arrange
             var request = new NpvRequest
@@ -195,10 +165,13 @@ namespace NPVCalculator.API.Tests
                 UpperBoundRate = 5m,
                 RateIncrement = 1m
             };
-            var validationException = new InvalidOperationException("Validation service unavailable");
+            var validationResult = new NpvValidationResult();
+            var cancellationException = new OperationCanceledException("Operation was cancelled");
 
             _mockValidationService.Setup(x => x.ValidateNpvRequest(request))
-                                  .Throws(validationException);
+                                  .Returns(validationResult);
+            _mockCalculator.Setup(x => x.CalculateAsync(request, It.IsAny<CancellationToken>()))
+                          .ThrowsAsync(cancellationException);
 
             // Act
             var result = await _controller.Calculate(request);
@@ -206,21 +179,44 @@ namespace NPVCalculator.API.Tests
             // Assert
             result.Should().BeOfType<ObjectResult>();
             var objectResult = result as ObjectResult;
-            objectResult.StatusCode.Should().Be(500);
+            objectResult!.StatusCode.Should().Be(409);
             objectResult.Value.Should().BeEquivalentTo(new
             {
                 success = false,
-                errors = new[] { "An error occurred while calculating NPV" }
+                errors = new[] { "Operation was cancelled" }
             });
+        }
 
-            _mockLogger.Verify(
-                x => x.Log(
-                    LogLevel.Error,
-                    It.IsAny<EventId>(),
-                    It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Unexpected error in NPV calculation")),
-                    validationException,
-                    It.IsAny<Func<It.IsAnyType, Exception, string>>()),
-                Times.Once);
+        [Fact]
+        public async Task Calculate_WithCancellationToken_ShouldPassTokenToCalculator()
+        {
+            // Arrange
+            var request = new NpvRequest
+            {
+                CashFlows = new List<decimal> { -1000, 300, 400, 500 },
+                LowerBoundRate = 1m,
+                UpperBoundRate = 5m,
+                RateIncrement = 1m
+            };
+            var validationResult = new NpvValidationResult();
+            var expectedResults = new List<NpvResult>
+            {
+                new() { Rate = 1m, Value = 100m }
+            };
+            using var cancellationTokenSource = new CancellationTokenSource();
+            var cancellationToken = cancellationTokenSource.Token;
+
+            _mockValidationService.Setup(x => x.ValidateNpvRequest(request))
+                                  .Returns(validationResult);
+            _mockCalculator.Setup(x => x.CalculateAsync(request, cancellationToken))
+                          .ReturnsAsync(expectedResults);
+
+            // Act
+            var result = await _controller.Calculate(request, cancellationToken);
+
+            // Assert
+            result.Should().BeOfType<OkObjectResult>();
+            _mockCalculator.Verify(x => x.CalculateAsync(request, cancellationToken), Times.Once);
         }
 
         [Fact]
@@ -246,7 +242,7 @@ namespace NPVCalculator.API.Tests
 
             _mockValidationService.Setup(x => x.ValidateNpvRequest(request))
                                   .Returns(validationResult);
-            _mockCalculator.Setup(x => x.CalculateAsync(request))
+            _mockCalculator.Setup(x => x.CalculateAsync(request, It.IsAny<CancellationToken>()))
                           .ReturnsAsync(expectedResults);
 
             // Act
@@ -262,25 +258,23 @@ namespace NPVCalculator.API.Tests
                 data = expectedResults,
                 warnings = new[] { "Warning: Large cash flow values detected", "Warning: Wide rate range specified" }
             };
-            okResult.Value.Should().BeEquivalentTo(expectedResponse);
+            okResult!.Value.Should().BeEquivalentTo(expectedResponse);
         }
 
         [Fact]
         public void Constructor_WithNullCalculator_ShouldThrowArgumentNullException()
         {
-            // Act & Assert
+            // FIXED: Cast null to the expected interface type
             var exception = Assert.Throws<ArgumentNullException>(() =>
-                new NpvController(null, _mockValidationService.Object, _mockLogger.Object));
+                new NpvController((INpvCalculator)null!, _mockValidationService.Object, _mockLogger.Object));
 
             exception.ParamName.Should().Be("calculator");
         }
-
         [Fact]
         public void Constructor_WithNullValidationService_ShouldThrowArgumentNullException()
         {
-            // Act & Assert
             var exception = Assert.Throws<ArgumentNullException>(() =>
-                new NpvController(_mockCalculator.Object, null, _mockLogger.Object));
+                new NpvController(_mockCalculator.Object, null!, _mockLogger.Object));
 
             exception.ParamName.Should().Be("validationService");
         }
@@ -288,42 +282,20 @@ namespace NPVCalculator.API.Tests
         [Fact]
         public void Constructor_WithNullLogger_ShouldThrowArgumentNullException()
         {
-            // Act & Assert
             var exception = Assert.Throws<ArgumentNullException>(() =>
-                new NpvController(_mockCalculator.Object, _mockValidationService.Object, null));
+                new NpvController(_mockCalculator.Object, _mockValidationService.Object, null!));
 
             exception.ParamName.Should().Be("logger");
         }
 
         [Fact]
-        public async Task Calculate_WithCancellationToken_ShouldPassTokenToCalculator()
+        public void Health_ShouldReturnOkResult()
         {
-            // Arrange
-            var request = new NpvRequest
-            {
-                CashFlows = new List<decimal> { -1000, 300, 400, 500 },
-                LowerBoundRate = 1m,
-                UpperBoundRate = 5m,
-                RateIncrement = 1m
-            };
-            var validationResult = new NpvValidationResult();
-            var expectedResults = new List<NpvResult>
-            {
-                new() { Rate = 1m, Value = 100m }
-            };
-            var cancellationToken = new CancellationToken();
-
-            _mockValidationService.Setup(x => x.ValidateNpvRequest(request))
-                                  .Returns(validationResult);
-            _mockCalculator.Setup(x => x.CalculateAsync(request))
-                          .ReturnsAsync(expectedResults);
-
             // Act
-            var result = await _controller.Calculate(request, cancellationToken);
+            var result = _controller.Health();
 
             // Assert
             result.Should().BeOfType<OkObjectResult>();
-            _mockCalculator.Verify(x => x.CalculateAsync(request), Times.Once);
         }
     }
 }

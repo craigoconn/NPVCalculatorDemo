@@ -64,7 +64,6 @@ namespace NPVCalculator.Application.Services
 
             foreach (var rate in rates)
             {
-                // Use domain service for calculation
                 var npv = _npvDomainService.CalculateNpv(request.CashFlows, rate / 100);
 
                 results.Add(new NpvResult

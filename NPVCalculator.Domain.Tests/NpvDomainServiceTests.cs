@@ -45,7 +45,7 @@ namespace NPVCalculator.Domain.Tests.Services
         public void CalculateNpv_WithNullCashFlows_ShouldThrowArgumentException()
         {
             // Arrange
-            List<decimal> cashFlows = null;
+            List<decimal> cashFlows = null!;
             var discountRate = 0.1m;
 
             // Act & Assert
