@@ -331,7 +331,7 @@ namespace NPVCalculator.Client.Tests.Services
         {
             // Arrange
             NpvInputModel inputModel = null!;
-            var expectedException = new ArgumentNullException(nameof(inputModel));
+            var expectedException = new ArgumentNullException("inputModel");
 
             _mockInputValidator.Setup(x => x.ValidateInput(inputModel))
                               .Throws(expectedException);

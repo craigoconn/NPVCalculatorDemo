@@ -26,7 +26,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\NpvCalculator.Shared\NpvCalculator.Shared.csproj" />
+    <ProjectReference Include="..\NpvCalculator.Shared\NPVCalculator.Shared.csproj" />
   </ItemGroup>
 
 </Project>

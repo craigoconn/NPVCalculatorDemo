@@ -11,7 +11,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NPVCalculator.Client", "NPV
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NPVCalculator.Domain", "NPVCalculator.Domain\NPVCalculator.Domain.csproj", "{ADF60337-9539-9D85-4AC6-C28D8AC9748B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NpvCalculator.Shared", "NpvCalculator.Shared\NpvCalculator.Shared.csproj", "{E414636C-3860-7142-0726-81B503DEC17E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NPVCalculator.Shared", "NpvCalculator.Shared\NPVCalculator.Shared.csproj", "{E414636C-3860-7142-0726-81B503DEC17E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NPVCalculator.Domain.Tests", "NPVCalculator.Domain.Tests\NPVCalculator.Domain.Tests.csproj", "{C8C63CB5-1B40-426A-8C55-7351AFFB6612}"
 EndProject

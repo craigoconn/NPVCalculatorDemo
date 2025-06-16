@@ -22,7 +22,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\NPVCalculator.Client\NPVCalculator.Client.csproj" />
-		<ProjectReference Include="..\NPVCalculator.Shared\NPVCalculator.Shared.csproj" />
+		<ProjectReference Include="..\NpvCalculator.Shared\NPVCalculator.Shared.csproj" />
 	</ItemGroup>
 
   <ItemGroup>
