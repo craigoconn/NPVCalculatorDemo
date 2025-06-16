@@ -41,35 +41,24 @@
             </div>
         }
 
-        <!-- Button section with calculate and cancel -->
-        <div class="d-flex gap-2">
-            <button class="btn btn-primary" @onclick="() => OnCalculate.InvokeAsync(Model)" disabled="@IsCalculating">
-                @if (IsCalculating)
-                {
-                    <span class="spinner-border spinner-border-sm me-2"></span>
-                    <span>Calculating...</span>
-                }
-                else
-                {
-                    <i class="fas fa-calculator"></i>
-                    <span>Calculate NPV</span>
-                }
-            </button>
-
+        <button class="btn btn-primary" @onclick="() => OnCalculate.InvokeAsync(Model)" disabled="@IsCalculating">
             @if (IsCalculating)
             {
-                <button class="btn btn-outline-secondary" @onclick="() => OnCancel.InvokeAsync()">
-                    <i class="fas fa-times"></i> Cancel
-                </button>
+                <span class="spinner-border spinner-border-sm me-2"></span>
+                <span>Calculating...</span>
             }
-        </div>
+            else
+            {
+                <i class="fas fa-calculator"></i>
+                <span>Calculate NPV</span>
+            }
+        </button>
     </div>
 </div>
 
 @code {
     [Parameter] public NpvInputModel Model { get; set; } = new();
     [Parameter] public EventCallback<NpvInputModel> OnCalculate { get; set; }
-    [Parameter] public EventCallback OnCancel { get; set; }
     [Parameter] public bool IsCalculating { get; set; }
     [Parameter] public List<string> Errors { get; set; } = [];
 }
