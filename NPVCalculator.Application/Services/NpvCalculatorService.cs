@@ -15,11 +15,6 @@ namespace NPVCalculator.Application.Services
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public decimal CalculateSingleNpv(IList<decimal> cashFlows, decimal discountRate)
-        {
-            // Delegate to domain service
-            return _npvDomainService.CalculateNpv(cashFlows, discountRate);
-        }
 
         public async Task<IEnumerable<NpvResult>> CalculateAsync(NpvRequest request, CancellationToken cancellationToken = default)
         {
@@ -49,27 +44,6 @@ namespace NPVCalculator.Application.Services
             }
 
             _logger.LogInformation("NPV calculation completed with {Count} results", results.Count);
-            return results;
-        }
-
-        public IEnumerable<NpvResult> Calculate(NpvRequest request)
-        {
-            if (request == null)
-                throw new ArgumentNullException(nameof(request));
-
-            var rates = GenerateDiscountRates(request);
-            var results = new List<NpvResult>();
-
-            foreach (var rate in rates)
-            {
-                var npv = _npvDomainService.CalculateNpv(request.CashFlows, rate / 100);
-                results.Add(new NpvResult
-                {
-                    Rate = Math.Round(rate, 2),
-                    Value = npv
-                });
-            }
-
             return results;
         }
 

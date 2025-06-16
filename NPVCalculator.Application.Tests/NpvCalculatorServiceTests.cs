@@ -22,25 +22,6 @@ namespace NPVCalculator.Application.Tests
         }
 
         [Fact]
-        public void CalculateSingleNpv_ShouldDelegateToDomainService()
-        {
-            // Arrange
-            var cashFlows = new List<decimal> { -1000, 300, 400, 500 };
-            var discountRate = 0.1m;
-            var expectedNpv = 150.25m;
-
-            _mockNpvDomainService.Setup(x => x.CalculateNpv(cashFlows, discountRate))
-                               .Returns(expectedNpv);
-
-            // Act
-            var result = _service.CalculateSingleNpv(cashFlows, discountRate);
-
-            // Assert
-            result.Should().Be(expectedNpv);
-            _mockNpvDomainService.Verify(x => x.CalculateNpv(cashFlows, discountRate), Times.Once);
-        }
-
-        [Fact]
         public async Task CalculateAsync_WithValidRequest_ShouldReturnCorrectNumberOfResults()
         {
             // Arrange
@@ -143,30 +124,6 @@ namespace NPVCalculator.Application.Tests
 
             // Act
             var results = await _service.CalculateAsync(request, cancellationTokenSource.Token);
-
-            // Assert
-            results.Should().HaveCount(3);
-            _mockNpvDomainService.Verify(x => x.CalculateNpv(It.IsAny<IList<decimal>>(), It.IsAny<decimal>()),
-                                       Times.Exactly(3));
-        }
-
-        [Fact]
-        public void Calculate_WithValidRequest_ShouldDelegateToDomainService()
-        {
-            // Arrange
-            var request = new NpvRequest
-            {
-                CashFlows = new List<decimal> { -1000, 300, 400, 500 },
-                LowerBoundRate = 1m,
-                UpperBoundRate = 3m,
-                RateIncrement = 1m
-            };
-
-            _mockNpvDomainService.Setup(x => x.CalculateNpv(It.IsAny<IList<decimal>>(), It.IsAny<decimal>()))
-                               .Returns(75m);
-
-            // Act
-            var results = _service.Calculate(request);
 
             // Assert
             results.Should().HaveCount(3);
