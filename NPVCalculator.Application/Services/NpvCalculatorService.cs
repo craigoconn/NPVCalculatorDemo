@@ -1,6 +1,6 @@
-﻿using NPVCalculator.Domain.Interfaces;
+﻿using Microsoft.Extensions.Logging;
+using NPVCalculator.Domain.Interfaces;
 using NPVCalculator.Shared.Models;
-using Microsoft.Extensions.Logging;
 
 namespace NPVCalculator.Application.Services
 {
