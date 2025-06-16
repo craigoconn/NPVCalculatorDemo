@@ -8,12 +8,12 @@ namespace NPVCalculator.Application.Services
 {
     public class NpvApplicationService : INpvApplicationService
     {
-        private readonly INpvCalculator _calculator;
+        private readonly INpvCalculatorService _calculator;
         private readonly IValidationService _validationService;
         private readonly ILogger<NpvApplicationService> _logger;
 
         public NpvApplicationService(
-            INpvCalculator calculator,
+            INpvCalculatorService calculator,
             IValidationService validationService,
             ILogger<NpvApplicationService> logger)
         {

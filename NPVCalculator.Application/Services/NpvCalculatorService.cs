@@ -4,7 +4,7 @@ using NPVCalculator.Shared.Models;
 
 namespace NPVCalculator.Application.Services
 {
-    public class NpvCalculatorService : INpvCalculator
+    public class NpvCalculatorService : INpvCalculatorService
     {
         private readonly INpvDomainService _npvDomainService;
         private readonly ILogger<NpvCalculatorService> _logger;

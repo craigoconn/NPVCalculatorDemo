@@ -12,7 +12,7 @@ namespace NPVCalculator.Application
         {
             // Domain services
             services.AddScoped<INpvDomainService, NpvDomainService>();
-            services.AddScoped<INpvCalculator, NpvCalculatorService>(); 
+            services.AddScoped<INpvCalculatorService, NpvCalculatorService>(); 
             services.AddScoped<IValidationService, ValidationService>();
 
             // Application services  

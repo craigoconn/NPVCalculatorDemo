@@ -2,7 +2,7 @@
 
 namespace NPVCalculator.Domain.Interfaces
 {
-    public interface INpvCalculator
+    public interface INpvCalculatorService
     {
         Task<IEnumerable<NpvResult>> CalculateAsync(NpvRequest request, CancellationToken cancellationToken = default);
         IEnumerable<NpvResult> Calculate(NpvRequest request);
