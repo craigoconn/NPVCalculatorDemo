@@ -1,4 +1,4 @@
-﻿using NPVCalculator.Domain.Entities;
+﻿using NPVCalculator.Domain.Models;
 using NPVCalculator.Shared.Models;
 
 namespace NPVCalculator.Domain.Interfaces

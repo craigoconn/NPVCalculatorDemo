@@ -1,9 +1,9 @@
-﻿using NPVCalculator.Domain.Entities;
-using NPVCalculator.Domain.Interfaces;
+﻿using NPVCalculator.Domain.Interfaces;
 using NPVCalculator.Shared.Models;
 using Microsoft.Extensions.Logging;
+using NPVCalculator.Domain.Models;
 
-namespace NPVCalculator.Application.Services
+namespace NPVCalculator.Domain.Services
 {
     public class ValidationService : IValidationService
     {

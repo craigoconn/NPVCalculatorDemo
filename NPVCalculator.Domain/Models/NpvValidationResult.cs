@@ -1,4 +1,4 @@
-﻿namespace NPVCalculator.Domain.Entities
+﻿namespace NPVCalculator.Domain.Models
 {
     public class NpvValidationResult
     {

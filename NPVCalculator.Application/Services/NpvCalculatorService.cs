@@ -35,10 +35,11 @@ namespace NPVCalculator.Application.Services
             {
                 for (int i = 0; i < rates.Count; i++)
                 {
-                    cancellationToken.ThrowIfCancellationRequested(); 
+                    cancellationToken.ThrowIfCancellationRequested();
 
                     var rate = rates[i];
                     var npv = _npvDomainService.CalculateNpv(request.CashFlows, rate / 100);
+
                     results.Add(new NpvResult
                     {
                         Rate = Math.Round(rate, 2),
@@ -65,7 +66,6 @@ namespace NPVCalculator.Application.Services
             foreach (var rate in rates)
             {
                 var npv = _npvDomainService.CalculateNpv(request.CashFlows, rate / 100);
-
                 results.Add(new NpvResult
                 {
                     Rate = Math.Round(rate, 2),
@@ -79,11 +79,14 @@ namespace NPVCalculator.Application.Services
         private static IEnumerable<decimal> GenerateDiscountRates(NpvRequest request)
         {
             var totalIterations = CalculateNumberOfIterations(request);
+
             for (int i = 0; i < totalIterations; i++)
             {
                 var rate = request.LowerBoundRate + (request.RateIncrement * i);
+
                 if (rate > request.UpperBoundRate + 0.001m)
                     yield break;
+
                 yield return rate;
             }
         }

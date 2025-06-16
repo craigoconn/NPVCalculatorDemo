@@ -1,9 +1,8 @@
 ﻿using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
-using NPVCalculator.Application.Services;
+using NPVCalculator.Domain.Services;
 using NPVCalculator.Shared.Models;
-using Xunit;
 
 namespace NPVCalculator.Application.Tests
 {

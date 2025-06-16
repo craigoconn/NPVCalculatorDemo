@@ -18,6 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\NPVCalculator.API\NPVCalculator.API.csproj" />
     <ProjectReference Include="..\NPVCalculator.Application\NPVCalculator.Application.csproj" />
     <ProjectReference Include="..\NPVCalculator.Domain\NPVCalculator.Domain.csproj" />
   </ItemGroup>

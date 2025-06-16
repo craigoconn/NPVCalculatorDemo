@@ -1,5 +1,5 @@
 ﻿using FluentAssertions;
-using NPVCalculator.Domain.Entities;
+using NPVCalculator.Domain.Models;
 
 namespace NPVCalculator.Domain.Tests
 {
