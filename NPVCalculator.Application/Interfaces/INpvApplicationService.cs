@@ -5,6 +5,6 @@ namespace NPVCalculator.Application.Interfaces
 {
     public interface INpvApplicationService
     {
-        Task<NpvApplicationResult> ProcessCalculationAsync(NpvRequest request, CancellationToken cancellationToken);
+        Task<NpvApplicationResult> ProcessCalculationAsync(NpvRequest request, CancellationToken cancellationToken = default);
     }
 }

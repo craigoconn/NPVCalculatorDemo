@@ -31,25 +31,22 @@ namespace NPVCalculator.Application.Services
 
             _logger.LogInformation("Starting NPV calculation for {Count} rates", rates.Count);
 
-            await Task.Run(async () =>
+            for (int i = 0; i < rates.Count; i++)
             {
-                for (int i = 0; i < rates.Count; i++)
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var rate = rates[i];
+                var npv = _npvDomainService.CalculateNpv(request.CashFlows, rate / 100);
+                results.Add(new NpvResult
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
+                    Rate = Math.Round(rate, 2),
+                    Value = npv
+                });
 
-                    var rate = rates[i];
-                    var npv = _npvDomainService.CalculateNpv(request.CashFlows, rate / 100);
-
-                    results.Add(new NpvResult
-                    {
-                        Rate = Math.Round(rate, 2),
-                        Value = npv
-                    });
-
-                    if (i % 10 == 0)
-                        await Task.Yield();
-                }
-            }, cancellationToken);
+                // Yield control back to the scheduler every 5 calculations
+                if (i % 5 == 0)
+                    await Task.Yield();
+            }
 
             _logger.LogInformation("NPV calculation completed with {Count} results", results.Count);
             return results;
